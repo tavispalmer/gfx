@@ -88,7 +88,7 @@ impl XRGB8888 {
 
     #[inline]
     pub const fn new(r: u8, g: u8, b: u8) -> Self {
-        Self(((r as u32) << 16) | ((g as u32) << 8) | (b as u32))
+        Self((0xff << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32))
     }
     #[inline]
     pub const fn r(&self) -> u8 {
