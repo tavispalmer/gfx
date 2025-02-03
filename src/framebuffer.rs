@@ -37,12 +37,20 @@ impl Framebuffer {
         self.width.next_power_of_two() * size_of::<XRGB8888>()
     }
     #[inline]
-    pub const fn as_ptr(&self) -> *const XRGB8888 {
+    pub const fn as_ptr(&self) -> *const u8 {
         self.framebuffer.as_ptr() as _
     }
     #[inline]
-    pub const fn as_mut_ptr(&mut self) -> *mut XRGB8888 {
+    pub const fn as_mut_ptr(&mut self) -> *mut u8 {
         self.framebuffer.as_ptr() as _
+    }
+    #[inline]
+    pub const fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(self.as_ptr(), self.height()*self.pitch()) }
+    }
+    #[inline]
+    pub const fn as_mut_slice(&mut self) -> &mut [u8] {
+        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.height()*self.pitch()) }
     }
 
     pub fn clear(&mut self, color: Color) {
@@ -55,11 +63,16 @@ impl Framebuffer {
     }
 
     pub fn draw(&mut self, texture: &Texture<Color>, x: isize, y: isize) {
-        for y_off in 0.max(-y) as usize..(texture.height() as isize).min(self.height() as isize - y) as usize {
-            for x_off in 0.max(-x) as usize..(texture.width() as isize).min(self.width() as isize - x) as usize {
+        for j in 0.max(y) as usize..0.max((y+(texture.height() as isize)).min(self.height() as isize)) as usize {
+            // texture coordinates
+            let v = (j as isize-y) as usize;
+
+            for i in 0.max(x) as usize..0.max((x+(texture.width() as isize)).min(self.width() as isize)) as usize {
+                let u = (i as isize-x) as usize;
+
                 // simple blending
-                let src = &texture[y_off][x_off];
-                let dst = &mut self[(y + y_off as isize) as usize][(x + x_off as isize) as usize];
+                let src = &texture[v][u];
+                let dst = &mut self[j][i];
                 let src_mul = src.a() as u16;
                 let dst_mul = 0xff - src_mul;
             
@@ -72,28 +85,23 @@ impl Framebuffer {
         }
     }
 
-    pub fn draw_paletted(&mut self, texture: &Texture<u8>, palette: &Texture<Color>, palette_index: usize, mut u0: usize, mut v0: usize, mut u1: usize, mut v1: usize, x: isize, y: isize) {
-        let y_rev = v0 > v1;
-        if y_rev {
-            swap(&mut v0, &mut v1);
-        }
-        let x_rev = u0 > u1;
-        if x_rev {
-            swap(&mut u0, &mut u1);
-        }
-        for j in 0.max(y) as usize..0.max((y+(v1 as isize)-(v0 as isize)).min(self.height() as isize)) as usize {
-            for i in 0.max(x) as usize..0.max((x+(u1 as isize)-(u0 as isize)).min(self.width() as isize)) as usize {
+    pub fn draw_paletted(&mut self, texture: &Texture<u8>, x: isize, y: isize, u: usize, v: usize, width: usize, height: usize, palette: &Texture<Color>, palette_index: usize, flip_x: bool, flip_y: bool) {
+        for j in 0.max(y) as usize..0.max((y+(height as isize)).min(self.height() as isize)) as usize {
+            // texture coordinates
+            let v = if !flip_y {
+                ((j+v) as isize-y) as usize
+            } else {
+                ((v+height-j) as isize+y-1) as usize
+            };
+
+            for i in 0.max(x) as usize..0.max((x+(width as isize)).min(self.width() as isize)) as usize {
+                let u = if !flip_x {
+                    ((i+u) as isize-x) as usize
+                } else {
+                    ((u+width-i) as isize+x-1) as usize
+                };
+
                 // simple blending
-                let v = if !y_rev {
-                    (j as isize+v0 as isize-y) as usize
-                } else {
-                    (-(j as isize)+v1 as isize+y-1) as usize
-                };
-                let u = if !x_rev {
-                    (i as isize+u0 as isize-x) as usize
-                } else {
-                    (-(i as isize)+u1 as isize+x-1) as usize
-                };
                 let src = &palette[palette_index][texture[v][u] as usize];
                 let dst = &mut self[j][i];
                 let src_mul = src.a() as u16;
