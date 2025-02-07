@@ -47,19 +47,19 @@ impl Color {
         self.0[3]
     }
     #[inline]
-    pub const fn set_r(&mut self, r: u8) {
+    pub fn set_r(&mut self, r: u8) {
         self.0[0] = r
     }
     #[inline]
-    pub const fn set_g(&mut self, g: u8) {
+    pub fn set_g(&mut self, g: u8) {
         self.0[1] = g
     }
     #[inline]
-    pub const fn set_b(&mut self, b: u8) {
+    pub fn set_b(&mut self, b: u8) {
         self.0[2] = b
     }
     #[inline]
-    pub const fn set_a(&mut self, a: u8) {
+    pub fn set_a(&mut self, a: u8) {
         self.0[3] = a
     }
 }
@@ -103,15 +103,15 @@ impl XRGB8888 {
         self.0 as u8
     }
     #[inline]
-    pub const fn set_r(&mut self, r: u8) {
+    pub fn set_r(&mut self, r: u8) {
         self.0 = (self.0 & !(0xff << 16)) | ((r as u32) << 16)
     }
     #[inline]
-    pub const fn set_g(&mut self, g: u8) {
+    pub fn set_g(&mut self, g: u8) {
         self.0 = (self.0 & !(0xff << 8)) | ((g as u32) << 8)
     }
     #[inline]
-    pub const fn set_b(&mut self, b: u8) {
+    pub fn set_b(&mut self, b: u8) {
         self.0 = (self.0 & !0xff) | (b as u32)
     }
 }

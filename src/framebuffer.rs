@@ -41,7 +41,7 @@ impl Framebuffer {
         self.framebuffer.as_ptr() as _
     }
     #[inline]
-    pub const fn as_mut_ptr(&mut self) -> *mut u8 {
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.framebuffer.as_ptr() as _
     }
     #[inline]
@@ -49,7 +49,7 @@ impl Framebuffer {
         unsafe { slice::from_raw_parts(self.as_ptr(), self.height()*self.pitch()) }
     }
     #[inline]
-    pub const fn as_mut_slice(&mut self) -> &mut [u8] {
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
         unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.height()*self.pitch()) }
     }
 
