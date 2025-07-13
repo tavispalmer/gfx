@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 gfx = { path = "../gfx" }
+glm = { path = "../glm" }
 
 [lib]
 crate-type = ["cdylib"]

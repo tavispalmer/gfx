@@ -1,6 +1,6 @@
 use std::{cell::RefCell, ffi::{c_char, c_uint, c_void}, mem, ptr, rc::Rc};
 
-use gfx::{gl::QuadStream, Gfx, GfxGL};
+use gfx::{gl::{Quad, QuadStream}, Gfx, GfxGL};
 
 mod retro;
 
@@ -169,10 +169,12 @@ pub extern "C" fn retro_run() {
         GFX.as_mut().unwrap().clear(0);
         QUAD_STREAM.as_mut().unwrap().write(
             &[
-                0.0, 0.0,
-                1.0, 0.0,
-                0.0, 1.0,
-                1.0, 1.0,
+                Quad::new(
+                    glm::vec2::new(0.0, 0.0),
+                    glm::vec2::new(1.0, 0.0),
+                    glm::vec2::new(0.0, 1.0),
+                    glm::vec2::new(1.0, 1.0),
+                ),
             ],
         );
         QUAD_STREAM.as_mut().unwrap().flush();

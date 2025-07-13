@@ -2,7 +2,7 @@
 
 use std::{ffi::{c_void, CStr}, io::Write, mem::MaybeUninit, ptr, rc::Rc};
 
-use crate::{gl::{self, ARRAY_BUFFER}, GfxGL, GL};
+use crate::{gl::{self, quad::Quad, ARRAY_BUFFER}, GfxGL, GL};
 
 pub struct QuadStream {
     // vtable
@@ -96,7 +96,7 @@ void main() {
             self.gl.bind_buffer(gl::COPY_WRITE_BUFFER, new_vbo);
             self.gl.buffer_data(
                 gl::COPY_WRITE_BUFFER,
-                (capacity * 8 * size_of::<f32>()) as isize,
+                (capacity * size_of::<Quad>()) as isize,
                 ptr::null(),
                 gl::DYNAMIC_DRAW,
             );
@@ -107,7 +107,7 @@ void main() {
                     gl::COPY_WRITE_BUFFER,
                     0,
                     0,
-                    (self.len * 8 * size_of::<f32>()) as isize,
+                    (self.len * size_of::<Quad>()) as isize,
                 );
             }
 
@@ -166,7 +166,7 @@ void main() {
                 gl::FLOAT,
                 gl::FALSE,
                 (2 * size_of::<f32>()) as i32,
-                (0 * size_of::<f32>()) as *const c_void,
+                ptr::null(),
             );
             self.gl.enable_vertex_attrib_array(self.vert);
             self.gl.bind_vertex_array(0);
@@ -174,7 +174,7 @@ void main() {
         self.cap = capacity;
     }
 
-    pub fn write(&mut self, buf: &[f32]) {
+    pub fn write(&mut self, buf: &[Quad]) {
         // write to buffer
         // todo: resize for capacity
         if buf.len() != 0 {
@@ -182,12 +182,12 @@ void main() {
                 self.gl.bind_buffer(gl::COPY_WRITE_BUFFER, self.vbo);
                 self.gl.buffer_sub_data(
                     gl::COPY_WRITE_BUFFER,
-                    (self.len * 8 * size_of::<f32>()) as isize,
-                    (buf.len() * size_of::<f32>()) as isize,
+                    (self.len * size_of::<Quad>()) as isize,
+                    (buf.len() * size_of::<Quad>()) as isize,
                     buf.as_ptr() as *const c_void,
                 );
             }
-            self.len += buf.len() / 8;
+            self.len += buf.len();
         }
     }
 
