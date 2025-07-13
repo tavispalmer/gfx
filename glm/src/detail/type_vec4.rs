@@ -3,25 +3,26 @@ use std::{ffi::{c_int, c_uint}, ops::{Deref, DerefMut, Index, IndexMut}, slice::
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 #[allow(non_camel_case_types)]
-pub struct vec1<T = f32> {
+pub struct vec4<T = f32> {
     pub x: T,
+    pub y: T,
+    pub z: T,
+    pub w: T,
 }
 
 #[allow(non_camel_case_types)]
-pub type bvec1 = vec1<bool>;
+pub type bvec4 = vec4<bool>;
 #[allow(non_camel_case_types)]
-pub type dvec1 = vec1<f64>;
+pub type dvec4 = vec4<f64>;
 #[allow(non_camel_case_types)]
-pub type ivec1 = vec1<c_int>;
+pub type ivec4 = vec4<c_int>;
 #[allow(non_camel_case_types)]
-pub type uvec1 = vec1<c_uint>;
+pub type uvec4 = vec4<c_uint>;
 
-impl<T> vec1<T> {
+impl<T> vec4<T> {
     #[inline]
-    pub const fn new(x: T) -> Self {
-        Self {
-            x,
-        }
+    pub const fn new(x: T, y: T, z: T, w: T) -> Self {
+        Self { x, y, z, w }
     }
 
     #[inline]
@@ -50,7 +51,7 @@ impl<T> vec1<T> {
     }
 }
 
-impl<T> Deref for vec1<T> {
+impl<T> Deref for vec4<T> {
     type Target = [T];
 
     #[inline]
@@ -59,14 +60,14 @@ impl<T> Deref for vec1<T> {
     }
 }
 
-impl<T> DerefMut for vec1<T> {
+impl<T> DerefMut for vec4<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
 }
 
-impl<T, I: SliceIndex<[T]>> Index<I> for vec1<T> {
+impl<T, I: SliceIndex<[T]>> Index<I> for vec4<T> {
     type Output = I::Output;
     
     #[inline]
@@ -75,7 +76,7 @@ impl<T, I: SliceIndex<[T]>> Index<I> for vec1<T> {
     }
 }
 
-impl<T, I: SliceIndex<[T]>> IndexMut<I> for vec1<T> {
+impl<T, I: SliceIndex<[T]>> IndexMut<I> for vec4<T> {
     #[inline]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         IndexMut::index_mut(&mut **self, index)

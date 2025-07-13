@@ -1,8 +1,8 @@
 // very *cool* name
 
-use std::{ffi::{c_void, CStr}, io::Write, mem::MaybeUninit, ptr, rc::Rc};
+use std::{ffi::{c_void, CStr}, io::Write, mem::MaybeUninit, ptr::{self, NonNull}, rc::Rc};
 
-use crate::{gl::{self, quad::Quad, ARRAY_BUFFER}, GfxGL, GL};
+use crate::{gfx::Quad, gl, GL};
 
 pub struct QuadStream {
     // vtable
@@ -18,46 +18,13 @@ pub struct QuadStream {
     len: usize,
     cap: usize,
 
-    // temp (will be shared)
-    prog: u32,
+    // vertex attrib location
     vert: u32,
 }
 
 impl QuadStream {
-    const VERTEX_SHADER: &str =
-"#version 140
-in vec2 vert;
-void main() {
-    gl_Position = vec4(vert, 0.0, 1.0);
-}";
-    const FRAGMENT_SHADER: &str =
-"#version 140
-out vec4 FragColor;
-void main() {
-    FragColor = vec4(1.0);
-}";
-
-    pub fn new(gl: Rc<GL>) -> Self {
+    pub fn new(gl: Rc<GL>, vert: u32) -> Self {
         unsafe {
-            // compile program
-            let prog = gl.create_program();
-            let vert = gl.create_shader(gl::VERTEX_SHADER);
-            let frag = gl.create_shader(gl::FRAGMENT_SHADER);
-
-            gl.shader_source(vert, Self::VERTEX_SHADER);
-            gl.shader_source(frag, Self::FRAGMENT_SHADER);
-            gl.compile_shader(vert);
-            gl.compile_shader(frag);
-
-            gl.attach_shader(prog, vert);
-            gl.attach_shader(prog, frag);
-            gl.link_program(prog);
-            gl.delete_shader(vert);
-            gl.delete_shader(frag);
-
-            // get attrib location
-            let vert = gl.get_attrib_location(prog, c"vert") as u32;
-
             let mut vertex_arrays = [0; 1];
             gl.gen_vertex_arrays(&mut vertex_arrays);
             let vao = vertex_arrays[0];
@@ -69,7 +36,6 @@ void main() {
                 ebo: 0,
                 len: 0,
                 cap: 0,
-                prog,
                 vert,
             };
 
@@ -194,9 +160,6 @@ void main() {
     pub fn flush(&mut self) {
         // draw elements
         unsafe {
-            // use program
-            self.gl.use_program(self.prog);
-
             // bind buffers
             self.gl.bind_vertex_array(self.vao);
 
@@ -220,8 +183,6 @@ impl Drop for QuadStream {
         unsafe {
             self.gl.delete_buffers(&[self.vbo, self.ebo]);
             self.gl.delete_vertex_arrays(&[self.vao]);
-            // temp
-            self.gl.delete_program(self.prog);
         }
     }
 }

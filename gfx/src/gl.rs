@@ -1,9 +1,3 @@
-mod quad_stream;
-mod quad;
-
-pub use quad_stream::QuadStream;
-pub use quad::Quad;
-
 use std::{ffi::*, mem};
 
 // 116

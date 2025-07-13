@@ -1,8 +1,12 @@
-use std::{cell::RefCell, ffi::{c_char, c_uint, c_void}, mem, ptr, rc::Rc};
+use std::{ffi::{c_char, c_uint, c_void}, mem::{self, MaybeUninit}, ptr};
 
-use gfx::{gl::{Quad, QuadStream}, Gfx, GfxGL};
+use app::App;
 
+mod app;
 mod retro;
+
+// app
+static mut APP: MaybeUninit<App> = MaybeUninit::uninit();
 
 // libretro callbacks
 static mut ENVIRON_CB: retro::environment_t = {
@@ -45,26 +49,20 @@ static mut INPUT_STATE_CB: retro::input_state_t = {
 // 3d rendering callbacks
 static mut HW_RENDER: retro::hw_render_callback = retro::hw_render_callback::DEFAULT;
 
-// gfx instance
-static mut GFX: Option<Box<GfxGL>> = None;
-static mut QUAD_STREAM: Option<QuadStream> = None;
-
-#[allow(static_mut_refs)]
 extern "C" fn context_reset() {
     eprintln!("Context reset!");
     unsafe {
-        let gfx = gfx::new_gl(|sym|
+        #[allow(static_mut_refs)]
+        APP.assume_init_mut().context_reset(|sym|
             mem::transmute(HW_RENDER.get_proc_address.unwrap_unchecked()(sym.as_ptr()))
         );
-        GFX = Some(Box::new(gfx));
-        QUAD_STREAM = Some(GFX.as_mut().unwrap().new_quad_stream());
     }
 }
 
 extern "C" fn context_destroy() {
     unsafe {
-        GFX = None;
-        QUAD_STREAM = None;
+        #[allow(static_mut_refs)]
+        APP.assume_init_mut().context_destroy();
     }
 }
 
@@ -142,10 +140,11 @@ pub extern "C" fn retro_get_system_av_info(info: *mut retro::system_av_info) {
     unsafe {
         *info = retro::system_av_info::default()
             .geometry(retro::game_geometry::default()
-                .base_width(800)
-                .base_height(600)
-                .max_width(800)
-                .max_height(600))
+                .base_width(App::WIDTH as u32)
+                .base_height(App::HEIGHT as u32)
+                .max_width(App::WIDTH as u32)
+                .max_height(App::HEIGHT as u32)
+                .aspect_ratio(App::ASPECT_RATIO))
             .timing(retro::system_timing::default()
                 .fps(60.0));
     }
@@ -158,30 +157,18 @@ pub extern "C" fn retro_set_controller_port_device(port: c_uint, device: c_uint)
 pub extern "C" fn retro_reset() {}
 
 #[unsafe(no_mangle)]
-#[allow(static_mut_refs)]
 pub extern "C" fn retro_run() {
     unsafe {
-        GFX.as_mut().unwrap().set_framebuffer(
-            HW_RENDER.get_current_framebuffer.unwrap_unchecked()() as u32,
-            800,
-            600,
-        );
-        GFX.as_mut().unwrap().clear(0);
-        QUAD_STREAM.as_mut().unwrap().write(
-            &[
-                Quad::new(
-                    glm::vec2::new(0.0, 0.0),
-                    glm::vec2::new(1.0, 0.0),
-                    glm::vec2::new(0.0, 1.0),
-                    glm::vec2::new(1.0, 1.0),
-                ),
-            ],
-        );
-        QUAD_STREAM.as_mut().unwrap().flush();
+        #[allow(static_mut_refs)] {
+            APP.assume_init_mut().set_framebuffer(
+                HW_RENDER.get_current_framebuffer.unwrap_unchecked()() as u32,
+            );
+            APP.assume_init_mut().run();
+        }
         VIDEO_CB(
             retro::HW_FRAME_BUFFER_VALID,
-            800,
-            600,
+            App::WIDTH as u32,
+            App::HEIGHT as u32,
             0,
         )
     }
@@ -241,6 +228,9 @@ pub extern "C" fn retro_load_game(game: *const retro::game_info) -> bool {
             eprintln!("HW Context could not be initialized, exiting...");
             return false;
         }
+
+        // initialize app
+        APP = MaybeUninit::new(App::new());
     }
 
     eprintln!("Loaded game!");
@@ -253,7 +243,12 @@ pub extern "C" fn retro_load_game_special(game_type: c_uint, info: *const retro:
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn retro_unload_game() {}
+pub extern "C" fn retro_unload_game() {
+    unsafe {
+        #[allow(static_mut_refs)]
+        APP.assume_init_drop();
+    }
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_get_region() -> c_uint {
