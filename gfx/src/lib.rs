@@ -8,19 +8,22 @@ mod gfx {
 
 use gfx::Quad;
 use gfx::QuadStream;
+use glm::mat4;
 use glm::vec2;
 
 mod color;
 pub mod gl;
+mod sprite_options;
 
 use std::{ffi::{c_void, CStr}, rc::Rc};
 
 pub use color::Color;
 pub use gl::GL;
+pub use sprite_options::SpriteOptions;
 
 pub trait Gfx {
     fn clear(&mut self, color: u32);
-    fn draw(&mut self, x: usize, y: usize);
+    fn draw(&mut self, sprite_options: SpriteOptions);
     fn flush(&mut self);
 }
 
@@ -38,7 +41,19 @@ impl GfxGL {
     pub fn set_framebuffer(&mut self, framebuffer: u32, width: usize, height: usize) {
         self.framebuffer = framebuffer;
         unsafe {
+            // set viewport
             self.gl.viewport(0, 0, width as i32, height as i32);
+
+            // reset transformation matrix
+            let value = mat4::ortho(0.0, width as f32, height as f32, 0.0);
+            self.gl.use_program(self.prog);
+            self.gl.uniform_matrix4fv(
+                self.mat as i32,
+                1,
+                gl::FALSE,
+                value.as_ptr() as *const f32,
+            );
+            self.gl.use_program(0);
         }
     }
 }
@@ -59,13 +74,18 @@ impl Gfx for GfxGL {
         }
     }
 
-    fn draw(&mut self, x: usize, y: usize) {
+    fn draw(&mut self, sprite_options: SpriteOptions) {
+        // gen points
+        let left = sprite_options.x as f32;
+        let right = (sprite_options.x + sprite_options.width) as f32;
+        let top = sprite_options.y as f32;
+        let bottom = (sprite_options.y + sprite_options.height) as f32;
         self.quad_stream.write(&[Quad::new(
-            vec2::new(x as f32, y as f32),
-            vec2::new((x + 1) as f32, y as f32),
-            vec2::new(x as f32, (y + 1) as f32),
-            vec2::new((x + 1) as f32, (y + 1) as f32)),
-        ]);
+            vec2::new(left, top),
+            vec2::new(right, top),
+            vec2::new(left, bottom),
+            vec2::new(right, bottom),
+        )]);
     }
 
     fn flush(&mut self) {
@@ -80,9 +100,10 @@ impl Gfx for GfxGL {
 pub fn new_gl<F: FnMut(&CStr) -> *const c_void>(f: F) -> GfxGL {
         const VERTEX_SHADER: &str =
 "#version 140
+uniform mat4 mat;
 in vec2 vert;
 void main() {
-    gl_Position = vec4(vert, 0.0, 1.0);
+    gl_Position = mat * vec4(vert, 0.0, 1.0);
 }";
         const FRAGMENT_SHADER: &str =
 "#version 140
@@ -113,6 +134,17 @@ void main() {
         // get attrib locations
         let vert = gl.get_attrib_location(prog, c"vert") as u32;
         let mat = gl.get_uniform_location(prog, c"mat") as u32;
+
+        // use identity for now
+        gl.use_program(prog);
+        let value = mat4::default();
+        gl.uniform_matrix4fv(
+            mat as i32,
+            1,
+            gl::FALSE,
+            value.as_ptr() as *const f32,
+        );
+        gl.use_program(0);
 
         // quad stream
         let quad_stream = QuadStream::new(Rc::clone(&gl), vert);

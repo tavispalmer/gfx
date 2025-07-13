@@ -13,8 +13,10 @@ mod detail {
 }
 mod ext {
     mod matrix_clip_space;
+    mod matrix_transform;
 
     pub use matrix_clip_space::*;
+    pub use matrix_transform::*;
 }
 
 pub use detail::*;

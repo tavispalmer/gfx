@@ -1,6 +1,6 @@
 use std::ffi::{c_void, CStr};
 
-use gfx::{Gfx, GfxGL};
+use gfx::{Gfx, GfxGL, SpriteOptions};
 
 pub struct App {
     gfx: Option<GfxGL>,
@@ -34,7 +34,9 @@ impl App {
     pub fn run(&mut self) {
         if let Some(gfx) = &mut self.gfx {
             gfx.clear(0);
-            gfx.draw(0, 0);
+            gfx.draw(SpriteOptions::default()
+                .width(16)
+                .height(16));
             gfx.flush();
         }
     }

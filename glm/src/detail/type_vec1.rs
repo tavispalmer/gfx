@@ -1,4 +1,4 @@
-use std::{ffi::{c_int, c_uint}, ops::{Deref, DerefMut, Index, IndexMut}, slice::{self, SliceIndex}};
+use std::{ffi::{c_int, c_uint}, ops::{Add, Deref, DerefMut, Index, IndexMut, Mul}, slice::{self, SliceIndex}};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -19,9 +19,7 @@ pub type uvec1 = vec1<c_uint>;
 impl<T> vec1<T> {
     #[inline]
     pub const fn new(x: T) -> Self {
-        Self {
-            x,
-        }
+        Self { x }
     }
 
     #[inline]
@@ -79,5 +77,27 @@ impl<T, I: SliceIndex<[T]>> IndexMut<I> for vec1<T> {
     #[inline]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         IndexMut::index_mut(&mut **self, index)
+    }
+}
+
+impl<T: Add<U>, U> Add<vec1<U>> for vec1<T> {
+    type Output = vec1<<T as Add<U>>::Output>;
+
+    #[inline]
+    fn add(self, rhs: vec1<U>) -> Self::Output {
+        vec1::new(
+            self.x + rhs.x,
+        )
+    }
+}
+
+impl<T: Mul<U>, U> Mul<U> for vec1<T> {
+    type Output = vec1<<T as Mul<U>>::Output>;
+
+    #[inline]
+    fn mul(self, rhs: U) -> Self::Output {
+        vec1::new(
+            self.x * rhs,
+        )
     }
 }

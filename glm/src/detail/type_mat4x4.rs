@@ -9,6 +9,9 @@ pub struct mat4x4<T = f32> {
     value: [vec4<T>; 4],
 }
 
+#[allow(non_camel_case_types)]
+pub type mat4 = mat4x4<f32>;
+
 impl mat4x4<f32> {
     pub const DEFAULT: Self = Self::new(
         vec4::new(1.0, 0.0, 0.0, 0.0),
