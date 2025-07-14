@@ -26,6 +26,13 @@ pub const UNSIGNED_SHORT: GLenum = 0x1403;
 pub const FLOAT: GLenum = 0x1406;
 // 160
 pub const TRIANGLES: GLenum = 0x0004;
+// 611
+pub const TEXTURE_2D: GLenum = 0x0DE1;
+// 614
+pub const TEXTURE_MAG_FILTER: GLenum = 0x2800;
+pub const TEXTURE_MIN_FILTER: GLenum = 0x2801;
+// 644
+pub const NEAREST: GLenum = 0x2600;
 // 659
 pub const NO_ERROR: GLenum = 0;
 pub const INVALID_ENUM: GLenum = 0x0500;
@@ -56,6 +63,16 @@ pub type PFNGLGETERRORPROC = unsafe extern "system" fn() -> GLenum;
 pub type PFNGLVIEWPORTPROC = unsafe extern "system" fn(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
 // 1142
 pub type PFNGLDRAWELEMENTSPROC = unsafe extern "system" fn(mode: GLenum, count: GLsizei, type_: GLenum, indices: *const GLvoid);
+// 1265
+pub type PFNGLTEXPARAMETERIPROC = unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLint);
+// 1289
+pub type PFNGLTEXIMAGE2DPROC = unsafe extern "system" fn(target: GLenum, level: GLint, internal_format: GLint, width: GLsizei, height: GLsizei, border: GLint, format: GLenum, type_: GLenum, pixels: *const GLvoid);
+// 1302
+pub type PFNGLGENTEXTURESPROC = unsafe extern "system" fn(n: GLsizei, textures: *mut GLuint);
+// 1304
+pub type PFNGLDELETETEXTURESPROC = unsafe extern "system" fn(n: GLsizei, textures: *const GLuint);
+// 1306
+pub type PFNGLBINDTEXTUREPROC = unsafe extern "system" fn(target: GLenum, texture: GLuint);
 
 // glext.h
 // 450
@@ -135,6 +152,11 @@ pub struct GL {
     get_error: PFNGLGETERRORPROC,
     viewport: PFNGLVIEWPORTPROC,
     draw_elements: PFNGLDRAWELEMENTSPROC,
+    tex_parameteri: PFNGLTEXPARAMETERIPROC,
+    tex_image_2d: PFNGLTEXIMAGE2DPROC,
+    gen_textures: PFNGLGENTEXTURESPROC,
+    delete_textures: PFNGLDELETETEXTURESPROC,
+    bind_texture: PFNGLBINDTEXTUREPROC,
     // glext.h
     bind_buffer: PFNGLBINDBUFFERPROC,
     delete_buffers: PFNGLDELETEBUFFERSPROC,
@@ -279,6 +301,84 @@ impl GL {
                 let val = f(c"glDrawElements");
                 if val.is_null() {
                     draw_elements
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            tex_parameteri: unsafe {
+                unsafe extern "system" fn tex_parameteri(
+                    _target: GLenum,
+                    _pname: GLenum,
+                    _param: GLint,
+                ) {
+                    panic!("Unable to load tex_parameteri")
+                }
+                let val = f(c"glTexParameteri");
+                if val.is_null() {
+                    tex_parameteri
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            tex_image_2d: unsafe {
+                unsafe extern "system" fn tex_image_2d(
+                    _target: GLenum,
+                    _level: GLint,
+                    _internal_format: GLint,
+                    _width: GLsizei,
+                    _height: GLsizei,
+                    _border: GLint,
+                    _format: GLenum,
+                    _type: GLenum,
+                    _pixels: *const GLvoid,
+                ) {
+                    panic!("Unable to load tex_image_2d")
+                }
+                let val = f(c"glTexImage2D");
+                if val.is_null() {
+                    tex_image_2d
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            gen_textures: unsafe {
+                unsafe extern "system" fn gen_textures(
+                    _n: GLsizei,
+                    _textures: *mut GLuint,
+                ) {
+                    panic!("Unable to load gen_textures")
+                }
+                let val = f(c"glGenTextures");
+                if val.is_null() {
+                    gen_textures
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            delete_textures: unsafe {
+                unsafe extern "system" fn delete_textures(
+                    _n: GLsizei,
+                    _textures: *const GLuint,
+                ) {
+                    panic!("Unable to load delete_textures")
+                }
+                let val = f(c"glDeleteTextures");
+                if val.is_null() {
+                    delete_textures
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            bind_texture: unsafe {
+                unsafe extern "system" fn bind_texture(
+                    _target: GLenum,
+                    _texture: GLuint,
+                ) {
+                    panic!("Unable to load bind_texture")
+                }
+                let val = f(c"glBindTexture");
+                if val.is_null() {
+                    bind_texture
                 } else {
                     mem::transmute(val)
                 }
@@ -808,6 +908,100 @@ impl GL {
             );
             #[cfg(debug_assertions)]
             self.check_error("draw_elements");
+        }
+    }
+
+    #[inline]
+    pub unsafe fn tex_parameteri(
+        &self,
+        target: GLenum,
+        pname: GLenum,
+        param: GLint,
+    ) {
+        unsafe {
+            (self.tex_parameteri)(
+                target,
+                pname,
+                param,
+            );
+            #[cfg(debug_assertions)]
+            self.check_error("tex_parameteri");
+        }
+    }
+
+    #[inline]
+    pub unsafe fn tex_image_2d(
+        &self,
+        target: GLenum,
+        level: GLint,
+        internal_format: GLint,
+        width: GLsizei,
+        height: GLsizei,
+        border: GLint,
+        format: GLenum,
+        type_: GLenum,
+        pixels: *const GLvoid,
+    ) {
+        unsafe {
+            (self.tex_image_2d)(
+                target,
+                level,
+                internal_format,
+                width,
+                height,
+                border,
+                format,
+                type_,
+                pixels,
+            );
+            #[cfg(debug_assertions)]
+            self.check_error("tex_image_2d");
+        }
+    }
+
+    #[inline]
+    pub unsafe fn gen_textures(
+        &self,
+        textures: &mut [GLuint],
+    ) {
+        unsafe {
+            (self.gen_textures)(
+                textures.len() as GLsizei,
+                textures.as_mut_ptr(),
+            );
+            #[cfg(debug_assertions)]
+            self.check_error("gen_textures");
+        }
+    }
+
+    #[inline]
+    pub unsafe fn delete_textures(
+        &self,
+        textures: &[GLuint],
+    ) {
+        unsafe {
+            (self.delete_textures)(
+                textures.len() as GLsizei,
+                textures.as_ptr(),
+            );
+            #[cfg(debug_assertions)]
+            self.check_error("delete_textures");
+        }
+    }
+
+    #[inline]
+    pub unsafe fn bind_texture(
+        &self,
+        target: GLenum,
+        texture: GLuint,
+    ) {
+        unsafe {
+            (self.bind_texture)(
+                target,
+                texture,
+            );
+            #[cfg(debug_assertions)]
+            self.check_error("bind_texture");
         }
     }
 

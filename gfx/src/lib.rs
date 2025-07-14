@@ -14,6 +14,7 @@ use glm::vec2;
 mod color;
 pub mod gl;
 mod sprite_options;
+mod texture;
 
 use std::{ffi::{c_void, CStr}, rc::Rc};
 
@@ -92,6 +93,7 @@ impl Gfx for GfxGL {
         unsafe {
             self.gl.use_program(self.prog);
             self.quad_stream.flush();
+            self.gl.use_program(0);
         }
     }
 }
