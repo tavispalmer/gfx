@@ -10,7 +10,7 @@ pub struct SpriteOptions {
     pub tex_x: usize,
     pub tex_y: usize,
 
-    pub tex: Option<Rc<TextureGL>>,
+    pub tex: Option<TextureGL>,
 }
 
 impl SpriteOptions {
@@ -54,7 +54,7 @@ impl SpriteOptions {
         self
     }
     #[inline]
-    pub fn tex(&mut self, tex: Option<Rc<TextureGL>>) -> &mut Self {
+    pub fn tex(&mut self, tex: Option<TextureGL>) -> &mut Self {
         self.tex = tex;
         self
     }

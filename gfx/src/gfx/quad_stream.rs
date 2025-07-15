@@ -18,12 +18,11 @@ pub struct QuadStream {
     len: usize,
     cap: usize,
 
-    // vertex attrib location
-    cur_prog: u32,
+    shader: Shader,
 }
 
 impl QuadStream {
-    pub fn new(gl: Rc<GL>, vert: u32, tex_coord: u32) -> Self {
+    pub fn new(gl: Rc<GL>, shader: Shader) -> Self {
         unsafe {
             let mut vertex_arrays = [0; 1];
             gl.gen_vertex_arrays(&mut vertex_arrays);
@@ -36,7 +35,7 @@ impl QuadStream {
                 ebo: 0,
                 len: 0,
                 cap: 0,
-                cur_prog: 0,
+                shader,
             };
 
             // start with 256
@@ -121,6 +120,30 @@ impl QuadStream {
                 (ebo_data.len() * size_of::<u16>()) as isize,
                 ebo_data.as_ptr() as *const c_void,
             );
+
+            // reset vertex attributes
+            self.gl.bind_vertex_array(self.vao);
+            self.gl.bind_buffer(gl::ARRAY_BUFFER, self.vbo);
+            self.gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
+            self.gl.vertex_attrib_pointer(
+                self.shader.vert(),
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                (4 * size_of::<f32>()) as i32,
+                ptr::null(),
+            );
+            self.gl.enable_vertex_attrib_array(self.shader.vert());
+            self.gl.vertex_attrib_pointer(
+                self.shader.tex_coord(),
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                (4 * size_of::<f32>()) as i32,
+                (2 * size_of::<f32>()) as *const c_void,
+            );
+            self.gl.enable_vertex_attrib_array(self.shader.tex_coord());
+            self.gl.bind_vertex_array(0);
         }
         self.cap = capacity;
     }
@@ -152,36 +175,14 @@ impl QuadStream {
         }
     }
 
-    pub fn flush(&mut self, shader: &Shader) {
+    pub fn flush(&mut self) {
         // draw elements
         unsafe {
             // bind shader
-            shader.bind();
+            self.shader.bind();
 
-            // reset vertex attributes
+            // bind vertex array
             self.gl.bind_vertex_array(self.vao);
-            if shader.id() != self.cur_prog {
-                self.gl.bind_buffer(gl::ARRAY_BUFFER, self.vbo);
-                self.gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
-                self.gl.vertex_attrib_pointer(
-                    shader.vert(),
-                    2,
-                    gl::FLOAT,
-                    gl::FALSE,
-                    (4 * size_of::<f32>()) as i32,
-                    ptr::null(),
-                );
-                self.gl.enable_vertex_attrib_array(shader.vert());
-                self.gl.vertex_attrib_pointer(
-                    shader.tex_coord(),
-                    2,
-                    gl::FLOAT,
-                    gl::FALSE,
-                    (4 * size_of::<f32>()) as i32,
-                    (2 * size_of::<f32>()) as *const c_void,
-                );
-                self.gl.enable_vertex_attrib_array(shader.tex_coord());
-            }
 
             // draw elements
             self.gl.draw_elements(
@@ -190,10 +191,18 @@ impl QuadStream {
                 gl::UNSIGNED_SHORT,
                 ptr::null(),
             );
+
+            // if we kept this bound, other code that binds/unbinds
+            // buffers could mess with the internal state
+            self.gl.bind_vertex_array(0);
         }
 
         // clear
         self.len = 0;
+    }
+
+    pub fn mat(&self, mat: &glm::mat4) {
+        self.shader.mat(mat)
     }
 }
 

@@ -4,7 +4,7 @@ use gfx::{Gfx, GfxGL, SpriteOptions, TextureGL};
 
 pub struct App {
     gfx: Option<GfxGL>,
-    tex: Option<Rc<TextureGL>>,
+    tex: Option<TextureGL>,
 }
 
 impl App {
@@ -21,7 +21,7 @@ impl App {
 
     pub fn context_reset<F: FnMut(&CStr) -> *const c_void>(&mut self, f: F) {
         self.gfx = Some(gfx::new_gl(f));
-        self.tex = Some(Rc::new(self.gfx.as_ref().unwrap().open_texture("awesomeface.png").unwrap()));
+        self.tex = Some(self.gfx.as_ref().unwrap().open_texture("awesomeface.png").unwrap());
     }
 
     pub fn context_destroy(&mut self) {

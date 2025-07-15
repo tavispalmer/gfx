@@ -39,8 +39,7 @@ pub struct GfxGL {
     gl: Rc<GL>,
     // for drawing quads
     quad_stream: QuadStream,
-    cur_tex: u32,
-    shader: Shader,
+    cur_tex: Option<TextureGL>,
     framebuffer: u32,
 }
 
@@ -53,7 +52,7 @@ impl GfxGL {
 
             // reset transformation matrix
             let ortho = mat4::ortho(0.0, width as f32, height as f32, 0.0);
-            self.shader.mat(&ortho);
+            self.quad_stream.mat(&ortho);
         }
     }
 
@@ -81,10 +80,11 @@ impl Gfx for GfxGL {
     fn draw(&mut self, sprite_options: &SpriteOptions) {
         // check texture
         let tex = sprite_options.tex.as_ref().map_or(0, |tex| tex.id());
-        if tex != self.cur_tex {
+        let cur_tex = self.cur_tex.as_ref().map_or(0, |tex| tex.id());
+        if tex != cur_tex {
             // flush
             self.flush();
-            self.cur_tex = tex;
+            self.cur_tex = sprite_options.tex.clone();
         }
         // gen points
         let left = sprite_options.x as f32;
@@ -104,17 +104,10 @@ impl Gfx for GfxGL {
     }
 
     fn flush(&mut self) {
-        unsafe {
-            let mut texture_binding_2d = MaybeUninit::uninit();
-            self.gl.get_integerv(gl::TEXTURE_BINDING_2D, texture_binding_2d.as_mut_ptr());
-            let texture_binding_2d = texture_binding_2d.assume_init() as u32;
-
-            if texture_binding_2d != self.cur_tex {
-                self.gl.bind_texture(gl::TEXTURE_2D, self.cur_tex);
-            }
-
-            self.quad_stream.flush(&self.shader);
+        if let Some(cur_tex) = &self.cur_tex {
+            cur_tex.bind();
         }
+        self.quad_stream.flush();
     }
 }
 
@@ -124,13 +117,12 @@ pub fn new_gl<F: FnMut(&CStr) -> *const c_void>(f: F) -> GfxGL {
 
     let shader = Shader::new(Rc::clone(&gl), Shader::VERTEX_SHADER, Shader::FRAGMENT_SHADER);
 
-    let quad_stream = QuadStream::new(Rc::clone(&gl), shader.vert(), shader.tex_coord());
+    let quad_stream = QuadStream::new(Rc::clone(&gl), shader);
 
     GfxGL {
         gl,
         quad_stream,
-        cur_tex: 0,
-        shader,
+        cur_tex: None,
         framebuffer: 0,
     }
 }

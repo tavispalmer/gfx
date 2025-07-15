@@ -1,6 +1,6 @@
 mod ffi;
 
-use std::{ffi::{c_char, c_int, c_uint, c_void}, fs::File, io::{Error, Read, Result, Seek, SeekFrom}, mem::MaybeUninit, path::Path, ptr::NonNull, slice};
+use std::{ffi::{c_char, c_int, c_uint, c_void}, fs::File, io::{BufReader, Error, Read, Result, Seek, SeekFrom}, mem::MaybeUninit, path::Path, ptr::NonNull, slice};
 
 use ffi::*;
 
@@ -59,7 +59,7 @@ pub fn load<P: AsRef<Path>>(filename: P, desired_channels: Option<Channels>) -> 
 fn load_erased(filename: &Path, desired_channels: Option<Channels>) -> Result<Image> {
     // callbacks
     struct User {
-        file: File,
+        file: BufReader<File>,
         error: Option<Error>,
         eof: bool,
     }
@@ -67,18 +67,23 @@ fn load_erased(filename: &Path, desired_channels: Option<Channels>) -> Result<Im
         let user = unsafe { &mut *(user as *mut User) };
         if user.error.is_none() {
             let buf = unsafe { slice::from_raw_parts_mut(data as *mut u8, size as usize) };
-            match user.file.read(buf) {
-                Ok(len) => {
-                    if len == 0 {
-                        user.eof = true;
+            let mut read = 0;
+            while read < buf.len() {
+                match user.file.read(&mut buf[read..]) {
+                    Ok(len) => {
+                        read += len;
+                        if len == 0 {
+                            user.eof = true;
+                            break;
+                        }
                     }
-                    len as c_int
-                }
-                Err(error) => {
-                    user.error = Some(error);
-                    0
+                    Err(error) => {
+                        user.error = Some(error);
+                        break;
+                    }
                 }
             }
+            read as c_int
         } else {
             0
         }
@@ -119,7 +124,7 @@ fn load_erased(filename: &Path, desired_channels: Option<Channels>) -> Result<Im
     };
 
     let mut user = User {
-        file: File::open(filename)?,
+        file: BufReader::new(File::open(filename)?),
         error: None,
         eof: false,
     };

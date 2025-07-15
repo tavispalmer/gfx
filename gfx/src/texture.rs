@@ -1,4 +1,4 @@
-use std::{ffi::c_void, io::Result, path::Path, rc::Rc};
+use std::{ffi::c_void, io::Result, mem::MaybeUninit, path::Path, rc::Rc};
 
 use crate::{gl, GL};
 
@@ -66,6 +66,18 @@ impl TextureGL {
 
     pub(crate) fn id(&self) -> u32 {
         self.0.tex
+    }
+
+    pub(crate) fn bind(&self) {
+        unsafe {
+            let mut texture_binding_2d = MaybeUninit::uninit();
+            self.0.gl.get_integerv(gl::TEXTURE_BINDING_2D, texture_binding_2d.as_mut_ptr());
+            let texture_binding_2d = texture_binding_2d.assume_init() as u32;
+
+            if texture_binding_2d != self.0.tex {
+                self.0.gl.bind_texture(gl::TEXTURE_2D, self.0.tex);
+            }
+        }
     }
 }
 
