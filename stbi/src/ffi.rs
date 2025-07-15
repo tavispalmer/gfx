@@ -1,3 +1,6 @@
+#![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
+
 use std::ffi::{c_char, c_int, c_uint, c_void};
 
 pub const STBI_default: c_uint = 0;
@@ -7,7 +10,6 @@ pub const STBI_rgb: c_uint = 3;
 pub const STBI_rgb_alpha: c_uint = 4;
 
 pub type stbi_uc = u8;
-pub type stbi_us = u16;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
