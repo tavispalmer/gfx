@@ -1,9 +1,10 @@
-use std::ffi::{c_void, CStr};
+use std::{ffi::{c_void, CStr}, rc::Rc};
 
-use gfx::{Gfx, GfxGL, SpriteOptions};
+use gfx::{Gfx, GfxGL, SpriteOptions, TextureGL};
 
 pub struct App {
     gfx: Option<GfxGL>,
+    tex: Option<Rc<TextureGL>>,
 }
 
 impl App {
@@ -14,15 +15,18 @@ impl App {
     pub fn new() -> Self {
         Self {
             gfx: None,
+            tex: None,
         }
     }
 
     pub fn context_reset<F: FnMut(&CStr) -> *const c_void>(&mut self, f: F) {
         self.gfx = Some(gfx::new_gl(f));
+        self.tex = Some(Rc::new(self.gfx.as_ref().unwrap().open_texture("awesomeface.png").unwrap()));
     }
 
     pub fn context_destroy(&mut self) {
         self.gfx = None;
+        self.tex = None;
     }
 
     pub fn set_framebuffer(&mut self, framebuffer: u32) {
@@ -35,8 +39,9 @@ impl App {
         if let Some(gfx) = &mut self.gfx {
             gfx.clear(0);
             gfx.draw(SpriteOptions::default()
-                .width(16)
-                .height(16));
+                .width(256)
+                .height(240)
+                .tex(self.tex.clone()));
             gfx.flush();
         }
     }

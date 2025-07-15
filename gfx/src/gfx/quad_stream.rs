@@ -2,7 +2,7 @@
 
 use std::{ffi::{c_void, CStr}, io::Write, mem::MaybeUninit, ptr::{self, NonNull}, rc::Rc};
 
-use crate::{gfx::Quad, gl, GL};
+use crate::{gfx::{Quad, Shader}, gl, GL};
 
 pub struct QuadStream {
     // vtable
@@ -19,11 +19,11 @@ pub struct QuadStream {
     cap: usize,
 
     // vertex attrib location
-    vert: u32,
+    cur_prog: u32,
 }
 
 impl QuadStream {
-    pub fn new(gl: Rc<GL>, vert: u32) -> Self {
+    pub fn new(gl: Rc<GL>, vert: u32, tex_coord: u32) -> Self {
         unsafe {
             let mut vertex_arrays = [0; 1];
             gl.gen_vertex_arrays(&mut vertex_arrays);
@@ -36,7 +36,7 @@ impl QuadStream {
                 ebo: 0,
                 len: 0,
                 cap: 0,
-                vert,
+                cur_prog: 0,
             };
 
             // start with 256
@@ -121,29 +121,24 @@ impl QuadStream {
                 (ebo_data.len() * size_of::<u16>()) as isize,
                 ebo_data.as_ptr() as *const c_void,
             );
-
-            // reset vertex attributes
-            self.gl.bind_vertex_array(self.vao);
-            self.gl.bind_buffer(gl::ARRAY_BUFFER, self.vbo);
-            self.gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
-            self.gl.vertex_attrib_pointer(
-                self.vert,
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                (2 * size_of::<f32>()) as i32,
-                ptr::null(),
-            );
-            self.gl.enable_vertex_attrib_array(self.vert);
-            self.gl.bind_vertex_array(0);
         }
         self.cap = capacity;
     }
 
     pub fn write(&mut self, buf: &[Quad]) {
         // write to buffer
-        // todo: resize for capacity
         if buf.len() != 0 {
+            // attempt resize
+            let mut new_cap = self.cap;
+            while buf.len() + self.len > new_cap {
+                // from monogame SpriteBatcher
+                new_cap += new_cap / 2;
+                new_cap = (new_cap + 63) & !63;
+            }
+            if new_cap != self.cap {
+                self.ensure_capacity(new_cap);
+            }
+
             unsafe {
                 self.gl.bind_buffer(gl::COPY_WRITE_BUFFER, self.vbo);
                 self.gl.buffer_sub_data(
@@ -157,11 +152,36 @@ impl QuadStream {
         }
     }
 
-    pub fn flush(&mut self) {
+    pub fn flush(&mut self, shader: &Shader) {
         // draw elements
         unsafe {
-            // bind buffers
+            // bind shader
+            shader.bind();
+
+            // reset vertex attributes
             self.gl.bind_vertex_array(self.vao);
+            if shader.id() != self.cur_prog {
+                self.gl.bind_buffer(gl::ARRAY_BUFFER, self.vbo);
+                self.gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
+                self.gl.vertex_attrib_pointer(
+                    shader.vert(),
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (4 * size_of::<f32>()) as i32,
+                    ptr::null(),
+                );
+                self.gl.enable_vertex_attrib_array(shader.vert());
+                self.gl.vertex_attrib_pointer(
+                    shader.tex_coord(),
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (4 * size_of::<f32>()) as i32,
+                    (2 * size_of::<f32>()) as *const c_void,
+                );
+                self.gl.enable_vertex_attrib_array(shader.tex_coord());
+            }
 
             // draw elements
             self.gl.draw_elements(
@@ -170,9 +190,8 @@ impl QuadStream {
                 gl::UNSIGNED_SHORT,
                 ptr::null(),
             );
-
-            self.gl.bind_vertex_array(0);
         }
+
         // clear
         self.len = 0;
     }

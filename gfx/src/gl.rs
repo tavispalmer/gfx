@@ -20,12 +20,19 @@ pub type GLclampd = f64;
 // 139
 pub const FALSE: GLboolean = 0;
 pub const TRUE: GLboolean = 1;
+// 144
+pub const UNSIGNED_BYTE: GLenum = 0x1401;
 // 146
 pub const UNSIGNED_SHORT: GLenum = 0x1403;
 // 149
 pub const FLOAT: GLenum = 0x1406;
 // 160
 pub const TRIANGLES: GLenum = 0x0004;
+// 446
+pub const RED: GLenum = 0x1903;
+// 468
+pub const RGB: GLenum = 0x1907;
+pub const RGBA: GLenum = 0x1908;
 // 611
 pub const TEXTURE_2D: GLenum = 0x0DE1;
 // 614
@@ -47,6 +54,8 @@ pub const DEPTH_BUFFER_BIT: GLenum = 0x00000100;
 pub const STENCIL_BUFFER_BIT: GLenum = 0x00000400;
 // 682
 pub const COLOR_BUFFER_BIT: GLenum = 0x00004000;
+// 697
+pub const TEXTURE_BINDING_2D: GLenum = 0x8069;
 // 745
 pub type PFNGLCLEARCOLORPROC = unsafe extern "system" fn(red: GLclampf, green: GLclampf, blue: GLclampf, alpha: GLclampf);
 // 747
@@ -129,6 +138,8 @@ pub type PFNGLVERTEXATTRIBPOINTERPROC = unsafe extern "system" fn(index: GLuint,
 pub const INVALID_FRAMEBUFFER_OPERATION: GLenum = 0x0506;
 // 1044
 pub const FRAMEBUFFER: GLenum = 0x8D40;
+// 1076
+pub const RG: GLenum = 0x8227;
 // 1167
 pub type PFNGLBINDFRAMEBUFFERPROC = unsafe extern "system" fn(target: GLenum, framebuffer: GLuint);
 // 1182

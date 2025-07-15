@@ -6,11 +6,10 @@ use ffi::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Channels {
-    Default,
-    Grey,
-    GreyAlpha,
-    Rgb,
-    RgbAlpha,
+    Grey = STBI_grey as isize,
+    GreyAlpha = STBI_grey_alpha as isize,
+    Rgb = STBI_rgb as isize,
+    RgbAlpha = STBI_rgb_alpha as isize,
 }
 
 pub struct Image {
@@ -53,11 +52,11 @@ impl Drop for Image {
     }
 }
 
-pub fn load<P: AsRef<Path>>(filename: P, desired_channels: Channels) -> Result<Image> {
+pub fn load<P: AsRef<Path>>(filename: P, desired_channels: Option<Channels>) -> Result<Image> {
     load_erased(filename.as_ref(), desired_channels)
 }
 
-fn load_erased(filename: &Path, desired_channels: Channels) -> Result<Image> {
+fn load_erased(filename: &Path, desired_channels: Option<Channels>) -> Result<Image> {
     // callbacks
     struct User {
         file: File,
@@ -138,7 +137,15 @@ fn load_erased(filename: &Path, desired_channels: Channels) -> Result<Image> {
             x.as_mut_ptr(),
             y.as_mut_ptr(),
             channels_in_file.as_mut_ptr(),
-            desired_channels as i32,
+            match desired_channels {
+                None => STBI_default,
+                Some(desired_channels) => match desired_channels {
+                    Channels::Grey => STBI_grey,
+                    Channels::GreyAlpha => STBI_grey_alpha,
+                    Channels::Rgb => STBI_rgb,
+                    Channels::RgbAlpha => STBI_rgb_alpha,
+                },
+            } as i32,
         );
         if let Some(error) = user.error {
             Err(error)
@@ -148,12 +155,11 @@ fn load_erased(filename: &Path, desired_channels: Channels) -> Result<Image> {
                 x: x.assume_init() as usize,
                 y: y.assume_init() as usize,
                 channels_in_file: match channels_in_file.assume_init() as c_uint {
-                    STBI_default => Channels::Default,
                     STBI_grey => Channels::Grey,
                     STBI_grey_alpha => Channels::GreyAlpha,
                     STBI_rgb => Channels::Rgb,
                     STBI_rgb_alpha => Channels::RgbAlpha,
-                    _ => panic!("load: Unknown value for channels_in_file"),
+                    _ => unreachable!("load: Unknown value for channels_in_file"),
                 },
             })
         }
