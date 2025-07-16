@@ -1,10 +1,10 @@
 // very *cool* name
 
-use std::{ffi::{c_void, CStr}, io::Write, mem::MaybeUninit, ptr::{self, NonNull}, rc::Rc};
+use std::{ffi::{c_void, CStr}, io::Write, marker::PhantomData, mem::MaybeUninit, ptr::{self, NonNull}, rc::Rc};
 
-use crate::{gfx::{Quad, Shader}, gl, GL};
+use crate::{gfx::{Quad, Shader, Vertex, VertexFormat, VertexUsage}, gl, GL};
 
-pub struct QuadStream {
+pub struct QuadStream<T: Vertex> {
     // vtable
     gl: Rc<GL>,
 
@@ -19,11 +19,21 @@ pub struct QuadStream {
     cap: usize,
 
     shader: Shader,
+
+    // type of this QuadStream
+    _marker: PhantomData<T>,
 }
 
-impl QuadStream {
-    pub fn new(gl: Rc<GL>, shader: Shader) -> Self {
+impl<T: Vertex> QuadStream<T> {
+    pub fn new(gl: Rc<GL>) -> Self {
         unsafe {
+            // compile shader
+            let shader = Shader::new(
+                Rc::clone(&gl),
+                T::vertex_shader(),
+                T::fragment_shader(),
+            );
+
             let mut vertex_arrays = [0; 1];
             gl.gen_vertex_arrays(&mut vertex_arrays);
             let vao = vertex_arrays[0];
@@ -36,6 +46,7 @@ impl QuadStream {
                 len: 0,
                 cap: 0,
                 shader,
+                _marker: PhantomData,
             };
 
             // start with 256
@@ -61,9 +72,9 @@ impl QuadStream {
             self.gl.bind_buffer(gl::COPY_WRITE_BUFFER, new_vbo);
             self.gl.buffer_data(
                 gl::COPY_WRITE_BUFFER,
-                (capacity * size_of::<Quad>()) as isize,
+                (capacity * size_of::<Quad<T>>()) as isize,
                 ptr::null(),
-                gl::DYNAMIC_DRAW,
+                gl::STREAM_DRAW,
             );
             if self.len != 0 {
                 self.gl.bind_buffer(gl::COPY_READ_BUFFER, self.vbo);
@@ -72,7 +83,7 @@ impl QuadStream {
                     gl::COPY_WRITE_BUFFER,
                     0,
                     0,
-                    (self.len * size_of::<Quad>()) as isize,
+                    (self.len * size_of::<Quad<T>>()) as isize,
                 );
             }
 
@@ -125,30 +136,30 @@ impl QuadStream {
             self.gl.bind_vertex_array(self.vao);
             self.gl.bind_buffer(gl::ARRAY_BUFFER, self.vbo);
             self.gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
-            self.gl.vertex_attrib_pointer(
-                self.shader.vert(),
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                (4 * size_of::<f32>()) as i32,
-                ptr::null(),
-            );
-            self.gl.enable_vertex_attrib_array(self.shader.vert());
-            self.gl.vertex_attrib_pointer(
-                self.shader.tex_coord(),
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                (4 * size_of::<f32>()) as i32,
-                (2 * size_of::<f32>()) as *const c_void,
-            );
-            self.gl.enable_vertex_attrib_array(self.shader.tex_coord());
+            for vertex_attrib in T::vertex_attrib() {
+                let index = match vertex_attrib.usage {
+                    VertexUsage::Position => self.shader.pos(),
+                    VertexUsage::TextureCoordinate => self.shader.tex(),
+                };
+                let (size, type_) = match vertex_attrib.format {
+                    VertexFormat::Vec2 => (2, gl::FLOAT),
+                };
+                self.gl.vertex_attrib_pointer(
+                    index,
+                    size,
+                    type_,
+                    gl::FALSE,
+                    size_of::<T>() as i32,
+                    vertex_attrib.offset as *const c_void,
+                );
+                self.gl.enable_vertex_attrib_array(index);
+            }
             self.gl.bind_vertex_array(0);
         }
         self.cap = capacity;
     }
 
-    pub fn write(&mut self, buf: &[Quad]) {
+    pub fn write(&mut self, buf: &[Quad<T>]) {
         // write to buffer
         if buf.len() != 0 {
             // attempt resize
@@ -166,8 +177,8 @@ impl QuadStream {
                 self.gl.bind_buffer(gl::COPY_WRITE_BUFFER, self.vbo);
                 self.gl.buffer_sub_data(
                     gl::COPY_WRITE_BUFFER,
-                    (self.len * size_of::<Quad>()) as isize,
-                    (buf.len() * size_of::<Quad>()) as isize,
+                    (self.len * size_of::<Quad<T>>()) as isize,
+                    (buf.len() * size_of::<Quad<T>>()) as isize,
                     buf.as_ptr() as *const c_void,
                 );
             }
@@ -201,12 +212,12 @@ impl QuadStream {
         self.len = 0;
     }
 
-    pub fn mat(&self, mat: &glm::mat4) {
-        self.shader.mat(mat)
+    pub fn shader(&self) -> &Shader {
+        &self.shader
     }
 }
 
-impl Drop for QuadStream {
+impl<T: Vertex> Drop for QuadStream<T> {
     fn drop(&mut self) {
         unsafe {
             self.gl.delete_buffers(&[self.vbo, self.ebo]);

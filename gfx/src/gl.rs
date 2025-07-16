@@ -28,6 +28,8 @@ pub const UNSIGNED_SHORT: GLenum = 0x1403;
 pub const FLOAT: GLenum = 0x1406;
 // 160
 pub const TRIANGLES: GLenum = 0x0004;
+// 267
+pub const DEPTH_TEST: GLenum = 0x0B71;
 // 446
 pub const RED: GLenum = 0x1903;
 // 468
@@ -90,6 +92,8 @@ pub type GLintptr = isize;
 // 458
 pub const ARRAY_BUFFER: GLenum = 0x8892;
 pub const ELEMENT_ARRAY_BUFFER: GLenum = 0x8893;
+// 469
+pub const STREAM_DRAW: GLenum = 0x88E0;
 // 472
 pub const STATIC_DRAW: GLenum = 0x88E4;
 // 475

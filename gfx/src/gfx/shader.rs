@@ -9,31 +9,12 @@ pub struct Shader {
     prog: u32,
 
     // attrib locations
-    vert: u32,
-    tex_coord: u32,
+    pos: u32,
+    tex: u32,
     mat: u32,
 }
 
 impl Shader {
-    pub const VERTEX_SHADER: &str =
-"#version 140
-uniform mat4 mat;
-in vec2 vert;
-in vec2 tex_coord;
-out vec2 frag_tex_coord;
-void main() {
-    gl_Position = mat * vec4(vert, 0.0, 1.0);
-    frag_tex_coord = tex_coord;
-}";
-    pub const FRAGMENT_SHADER: &str =
-"#version 140
-uniform sampler2D tex;
-in vec2 frag_tex_coord;
-out vec4 FragColor;
-void main() {
-    FragColor = texture(tex, frag_tex_coord);
-}";
-
     pub fn new(gl: Rc<GL>, vertex_shader: &str, fragment_shader: &str) -> Self {
         unsafe {
             // compile shader for QuadStream
@@ -53,15 +34,15 @@ void main() {
             gl.delete_shader(frag);
 
             // get attrib locations
-            let vert = gl.get_attrib_location(prog, c"vert") as u32;
-            let tex_coord = gl.get_attrib_location(prog, c"tex_coord") as u32;
+            let pos = gl.get_attrib_location(prog, c"pos") as u32;
+            let tex = gl.get_attrib_location(prog, c"tex") as u32;
             let mat = gl.get_uniform_location(prog, c"mat") as u32;
 
             let shader = Self {
                 gl,
                 prog,
-                vert,
-                tex_coord,
+                pos,
+                tex,
                 mat,
             };
 
@@ -84,16 +65,12 @@ void main() {
         }
     }
 
-    pub const fn id(&self) -> u32 {
-        self.prog
+    pub const fn pos(&self) -> u32 {
+        self.pos
     }
 
-    pub const fn vert(&self) -> u32 {
-        self.vert
-    }
-
-    pub const fn tex_coord(&self) -> u32 {
-        self.tex_coord
+    pub const fn tex(&self) -> u32 {
+        self.tex
     }
 
     pub fn mat(&self, mat: &glm::mat4) {
