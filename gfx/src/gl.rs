@@ -155,6 +155,8 @@ pub const COPY_READ_BUFFER: GLenum = 0x8F36;
 pub const COPY_WRITE_BUFFER: GLenum = 0x8F37;
 // 1341
 pub type PFNGLCOPYBUFFERSUBDATAPROC = unsafe extern "system" fn(read_target: GLenum, write_target: GLenum, read_offset: GLintptr, write_offset: GLintptr, size: GLsizeiptr);
+// 2009
+pub const COPY_WRITE_BUFFER_BINDING: GLenum = 0x8F37;
 // 2545
 pub const CONTEXT_LOST: GLenum = 0x0507;
 

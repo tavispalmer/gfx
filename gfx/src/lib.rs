@@ -1,4 +1,5 @@
 mod gfx {
+    mod buffer;
     mod pos;
     mod pos_tex;
     mod quad;
