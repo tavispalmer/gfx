@@ -1,8 +1,8 @@
 // very *cool* name
 
-use std::{alloc::{self, alloc, dealloc, realloc, GlobalAlloc, Layout}, ffi::{c_void, CStr}, io::Write, marker::PhantomData, mem::MaybeUninit, ptr::{self, NonNull}, rc::Rc};
+use std::{alloc::{self, alloc, dealloc, realloc, GlobalAlloc, Layout}, ffi::{c_void, CStr}, io::Write, marker::PhantomData, mem::{self, MaybeUninit}, ptr::{self, NonNull}, rc::Rc, slice};
 
-use crate::{gfx::{Quad, Shader, Vertex, VertexFormat, VertexUsage}, gl, GL};
+use crate::{gfx::{buffer::Buffer, Quad, Shader, Vertex, VertexFormat, VertexUsage}, gl, GL};
 
 pub struct QuadStream<T: Vertex> {
     // vtable
@@ -16,13 +16,8 @@ pub struct QuadStream<T: Vertex> {
 
     // gl objects
     vao: u32,
-
-    vbo: u32,
-    
-    ebo: u32,
-
-    // vec implementation on the gpu side
-    cap: usize,
+    vbo: Option<Buffer>,
+    ebo: Option<Buffer>,
 
     shader: Shader,
 }
@@ -40,7 +35,7 @@ impl<T: Vertex> QuadStream<T> {
             let mut vertex_arrays = [0; 1];
             gl.gen_vertex_arrays(&mut vertex_arrays);
             let vao = vertex_arrays[0];
-
+            
             Self {
                 gl,
                 buf:
@@ -50,9 +45,8 @@ impl<T: Vertex> QuadStream<T> {
                 buf_cap: 256,
                 buf_len: 0,
                 vao,
-                vbo: 0,
-                ebo: 0,
-                cap: 0,
+                vbo: None,
+                ebo: None,
                 shader,
             }
         }
@@ -61,69 +55,40 @@ impl<T: Vertex> QuadStream<T> {
     fn grow(&mut self) {
         unsafe {
             // allocate new buffers
-            let mut new_buffers = [0; 2];
-            self.gl.gen_buffers(&mut new_buffers);
-            let new_vbo = new_buffers[0];
-            let new_ebo = new_buffers[1];
+            let new_vbo = Buffer::new(self.gl.clone(), self.buf_cap * size_of::<Quad<T>>(), gl::STREAM_DRAW);
+            let new_ebo = Buffer::new(self.gl.clone(), self.buf_cap * 6 * size_of::<u16>(), gl::STATIC_DRAW);
 
-            // new vbo
-            self.gl.bind_buffer(gl::ARRAY_BUFFER, new_vbo);
-            self.gl.buffer_data(
-                gl::ARRAY_BUFFER,
-                (self.buf_cap * size_of::<Quad<T>>()) as isize,
-                ptr::null(),
-                gl::STREAM_DRAW,
-            );
-
-            // new ebo
-            self.gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, new_ebo);
-            self.gl.buffer_data(
-                gl::ELEMENT_ARRAY_BUFFER,
-                (self.buf_cap * 6 * size_of::<u16>()) as isize,
-                ptr::null(),
-                gl::STATIC_DRAW,
-            );
-            if self.cap != 0 {
-                // copy over already generated data
-                self.gl.bind_buffer(gl::COPY_READ_BUFFER, self.ebo);
-                self.gl.copy_buffer_sub_data(
-                    gl::COPY_READ_BUFFER,
-                    gl::ELEMENT_ARRAY_BUFFER,
-                    0,
-                    0,
-                    (self.cap * 6 * size_of::<u16>()) as isize,
-                );
-                // delete exiting arrays here
-                self.gl.delete_buffers(&[self.vbo, self.ebo]);
+            // copy over already generated data
+            if let Some(ebo) = &self.ebo {
+                new_ebo.copy_from_buffer(ebo, 0, 0, ebo.size());
             }
 
-            self.vbo = new_vbo;
-            self.ebo = new_ebo;
-
             // pre-generate new ebo entries
-            let mut ebo_data = Box::new_uninit_slice((self.buf_cap-self.cap)*6);
-            for i in self.cap..self.buf_cap {
-                ebo_data[i*6+0] = MaybeUninit::new((i*4+0) as u16);
-                ebo_data[i*6+1] = MaybeUninit::new((i*4+1) as u16);
-                ebo_data[i*6+2] = MaybeUninit::new((i*4+2) as u16);
-                ebo_data[i*6+3] = MaybeUninit::new((i*4+1) as u16);
-                ebo_data[i*6+4] = MaybeUninit::new((i*4+3) as u16);
-                ebo_data[i*6+5] = MaybeUninit::new((i*4+2) as u16);
+            let begin = match &self.ebo {
+                Some(ebo) => ebo.size() / size_of::<u16>(),
+                None => 0,
+            };
+            let end = new_ebo.size() / size_of::<u16>();
+            let mut ebo_data = Box::new_uninit_slice(end-begin);
+            for i in begin/6..end/6 {
+                ebo_data[(i-begin)*6+0] = MaybeUninit::new((i*4+0) as u16);
+                ebo_data[(i-begin)*6+1] = MaybeUninit::new((i*4+1) as u16);
+                ebo_data[(i-begin)*6+2] = MaybeUninit::new((i*4+2) as u16);
+                ebo_data[(i-begin)*6+3] = MaybeUninit::new((i*4+1) as u16);
+                ebo_data[(i-begin)*6+4] = MaybeUninit::new((i*4+3) as u16);
+                ebo_data[(i-begin)*6+5] = MaybeUninit::new((i*4+2) as u16);
             }
             let ebo_data = ebo_data.assume_init();
 
-            // ebo is still on gl::ELEMENT_ARRAY_BUFFER
-            self.gl.buffer_sub_data(
-                gl::ELEMENT_ARRAY_BUFFER,
-                (self.cap * 6 * size_of::<u16>()) as isize,
-                (ebo_data.len() * size_of::<u16>()) as isize,
+            new_ebo.copy_from_slice(slice::from_raw_parts(
                 ebo_data.as_ptr().cast(),
-            );
+                ebo_data.len() / size_of::<u16>(),
+            ), begin * size_of::<u16>());
 
             // reset vertex attributes
             self.gl.bind_vertex_array(self.vao);
-            self.gl.bind_buffer(gl::ARRAY_BUFFER, self.vbo);
-            self.gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
+            new_vbo.bind(gl::ARRAY_BUFFER);
+            new_ebo.bind(gl::ELEMENT_ARRAY_BUFFER);
             for vertex_attrib in T::vertex_attrib() {
                 let index = match vertex_attrib.usage {
                     VertexUsage::Position => self.shader.pos(),
@@ -143,8 +108,10 @@ impl<T: Vertex> QuadStream<T> {
                 self.gl.enable_vertex_attrib_array(index);
             }
             self.gl.bind_vertex_array(0);
+
+            self.vbo = Some(new_vbo);
+            self.ebo = Some(new_ebo);
         }
-        self.cap = self.buf_cap;
     }
 
     #[inline]
@@ -191,18 +158,21 @@ impl<T: Vertex> QuadStream<T> {
 
     pub fn flush(&mut self) {
         // do we need to allocate more space on the gpu?
-        if self.cap != self.buf_cap {
+        let size = match &self.vbo {
+            Some(vbo) => vbo.size(),
+            None => 0,
+        };
+        if size != self.buf_cap {
             self.grow();
         }
         unsafe {
             // copy over data
-            self.gl.bind_buffer(gl::ARRAY_BUFFER, self.vbo);
-            self.gl.buffer_sub_data(
-                gl::ARRAY_BUFFER,
-                0,
-                (self.buf_len * size_of::<Quad<T>>()) as isize,
-                self.buf.as_ptr().cast(),
-            );
+            if let Some(vbo) = &self.vbo {
+                vbo.copy_from_slice(slice::from_raw_parts(
+                    self.buf.as_ptr().cast(),
+                    self.buf_len * size_of::<Quad<T>>(),
+                ), 0);
+            }
 
             // draw elements
             // bind shader
@@ -241,10 +211,6 @@ impl<T: Vertex> Drop for QuadStream<T> {
                 Layout::array::<Quad<T>>(self.buf_cap).unwrap(),
             );
             self.gl.delete_vertex_arrays(&[self.vao]);
-            // these are allocated on demand
-            if self.vbo != 0 {
-                self.gl.delete_buffers(&[self.vbo, self.ebo]);
-            }
         }
     }
 }

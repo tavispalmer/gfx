@@ -1,4 +1,4 @@
-use std::{alloc::Layout, mem::{self, MaybeUninit}, ptr, rc::Rc, slice};
+use std::{alloc::Layout, mem::{self, MaybeUninit}, num::NonZero, ops::{Bound, Index}, ptr, rc::Rc, slice::{self, SliceIndex}};
 
 use crate::{gl, GL};
 
@@ -6,73 +6,88 @@ pub struct Buffer {
     // vtable
     gl: Rc<GL>,
 
-    buf: u32,
-    len: usize,
+    buf: NonZero<u32>,
+    size: usize,
 }
 
 impl Buffer {
     #[inline]
     pub const fn id(&self) -> u32 {
-        self.buf
+        self.buf.get()
     }
 
     #[inline]
-    pub const fn len(&self) -> usize {
-        self.len
+    pub const fn size(&self) -> usize {
+        self.size
     }
 
-    pub fn new(gl: Rc<GL>, layout: Layout) -> Self {
-        let len = layout.size();
-        if len != 0 {
-            unsafe {
-                let mut buf = MaybeUninit::uninit();
-                gl.gen_buffers(slice::from_raw_parts_mut(
-                    buf.as_mut_ptr(),
-                    1,
-                ));
-                let buf = buf.assume_init();
-                let len = layout.size();
+    pub fn new(gl: Rc<GL>, size: usize, usage: u32) -> Self {
+        unsafe {
+            let mut buf = MaybeUninit::uninit();
+            gl.gen_buffers(slice::from_raw_parts_mut(
+                buf.as_mut_ptr(),
+                1,
+            ));
+            let buf = NonZero::new(buf.assume_init()).unwrap();
 
-                gl.bind_buffer(gl::COPY_WRITE_BUFFER, buf);
-                gl.buffer_data(
-                    gl::COPY_WRITE_BUFFER,
-                    len.cast_signed(),
-                    ptr::null(),
-                    gl::STREAM_DRAW,
-                );
+            gl.bind_buffer(gl::COPY_WRITE_BUFFER, buf.get());
+            gl.buffer_data(
+                gl::COPY_WRITE_BUFFER,
+                size.cast_signed(),
+                ptr::null(),
+                usage,
+            );
 
-                Self {
-                    gl,
-                    buf,
-                    len,
-                }
-            }
-        } else {
             Self {
                 gl,
-                buf: 0,
-                len,
+                buf,
+                size,
             }
         }
     }
 
-    pub unsafe fn copy(&self, src: *const u8, dst: usize, count: usize) {
+    pub fn bind(&self, target: u32) {
         unsafe {
-            let mut copy_write_buffer_binding = MaybeUninit::uninit();
+            let mut binding = MaybeUninit::uninit();
             self.gl.get_integerv(
-                gl::COPY_WRITE_BUFFER_BINDING,
-                copy_write_buffer_binding.as_mut_ptr(),
+                match target {
+                    gl::ARRAY_BUFFER => gl::ARRAY_BUFFER_BINDING,
+                    gl::ELEMENT_ARRAY_BUFFER => gl::ELEMENT_ARRAY_BUFFER_BINDING,
+                    gl::COPY_READ_BUFFER => gl::COPY_READ_BUFFER_BINDING,
+                    gl::COPY_WRITE_BUFFER => gl::COPY_WRITE_BUFFER_BINDING,
+                    _ => panic!("bind: Unknown target"),
+                },
+                binding.as_mut_ptr(),
             );
-            let copy_write_buffer_binding = copy_write_buffer_binding.assume_init() as u32;
-            if copy_write_buffer_binding != self.buf {
-                self.gl.bind_buffer(gl::COPY_WRITE_BUFFER, self.buf);
+            let binding = binding.assume_init() as u32;
+            if binding != self.buf.get() {
+                self.gl.bind_buffer(target, self.buf.get());
             }
+        }
+    }
 
+    pub fn copy_from_slice(&self, src: &[u8], offset: usize) {
+        self.bind(gl::COPY_WRITE_BUFFER);
+        unsafe {
             self.gl.buffer_sub_data(
                 gl::COPY_WRITE_BUFFER,
-                dst.cast_signed(),
+                offset.cast_signed(),
+                src.len().cast_signed(),
+                src.as_ptr().cast(),
+            );
+        }
+    }
+
+    pub fn copy_from_buffer(&self, src: &Buffer, src_offset: usize, dst_offset: usize, count: usize) {
+        src.bind(gl::COPY_READ_BUFFER);
+        self.bind(gl::COPY_WRITE_BUFFER);
+        unsafe {
+            self.gl.copy_buffer_sub_data(
+                gl::COPY_READ_BUFFER,
+                gl::COPY_WRITE_BUFFER,
+                src_offset.cast_signed(),
+                dst_offset.cast_signed(),
                 count.cast_signed(),
-                src.cast(),
             );
         }
     }
@@ -81,10 +96,8 @@ impl Buffer {
 impl Drop for Buffer {
     #[inline]
     fn drop(&mut self) {
-        if self.buf != 0 {
-            unsafe {
-                self.gl.delete_buffers(&[self.buf]);
-            }
+        unsafe {
+            self.gl.delete_buffers(&[self.buf.get()]);
         }
     }
 }

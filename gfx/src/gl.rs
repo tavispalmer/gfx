@@ -92,6 +92,8 @@ pub type GLintptr = isize;
 // 458
 pub const ARRAY_BUFFER: GLenum = 0x8892;
 pub const ELEMENT_ARRAY_BUFFER: GLenum = 0x8893;
+pub const ARRAY_BUFFER_BINDING: GLenum = 0x8894;
+pub const ELEMENT_ARRAY_BUFFER_BINDING: GLenum = 0x8895;
 // 469
 pub const STREAM_DRAW: GLenum = 0x88E0;
 // 472
@@ -155,7 +157,8 @@ pub const COPY_READ_BUFFER: GLenum = 0x8F36;
 pub const COPY_WRITE_BUFFER: GLenum = 0x8F37;
 // 1341
 pub type PFNGLCOPYBUFFERSUBDATAPROC = unsafe extern "system" fn(read_target: GLenum, write_target: GLenum, read_offset: GLintptr, write_offset: GLintptr, size: GLsizeiptr);
-// 2009
+// 2008
+pub const COPY_READ_BUFFER_BINDING: GLenum = 0x8F36;
 pub const COPY_WRITE_BUFFER_BINDING: GLenum = 0x8F37;
 // 2545
 pub const CONTEXT_LOST: GLenum = 0x0507;
