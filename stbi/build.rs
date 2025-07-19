@@ -26,7 +26,7 @@ fn main() {
         .arg("-o")
         .arg(out.join("stb_image.o"))
         .arg("-c")
-        .arg("src/stb_image.h")
+        .arg("stb_image.h")
         .status()
         .unwrap()
         .success());
