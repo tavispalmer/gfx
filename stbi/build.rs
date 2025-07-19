@@ -1,4 +1,4 @@
-use std::{env, io::Write, mem, path::PathBuf, process::{Command, ExitStatus, Stdio}};
+use std::{env, path::PathBuf, process::Command};
 
 fn main() {
     let out = &PathBuf::from(env::var_os("OUT_DIR").unwrap());
@@ -11,7 +11,7 @@ fn main() {
         .arg("-Winvalid-pch")
         .arg("-O3") // we always compile stb_image.h in release mode
 
-        // we use callbacks to use rust's stdio
+        // we use callbacks to use rust's stdio instead
         .arg("-DSTBI_NO_STDIO")
         // define STB_IMAGE_IMPLEMENTATION so we get the function definitions
         .arg("-DSTB_IMAGE_IMPLEMENTATION")

@@ -1,5 +1,7 @@
 // libretro bindings
 
+#![allow(non_camel_case_types)]
+
 use std::{ffi::{c_char, c_uint, c_void, CStr}, marker::PhantomData, ptr};
 
 // 97

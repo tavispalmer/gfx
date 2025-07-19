@@ -72,20 +72,6 @@ impl Buffer {
             );
         }
     }
-
-    pub fn copy_from_buffer(&self, src: &Buffer, src_offset: usize, dst_offset: usize, count: usize) {
-        src.bind(gl::COPY_READ_BUFFER);
-        self.bind(gl::COPY_WRITE_BUFFER);
-        unsafe {
-            self.gl.copy_buffer_sub_data(
-                gl::COPY_READ_BUFFER,
-                gl::COPY_WRITE_BUFFER,
-                src_offset.cast_signed(),
-                dst_offset.cast_signed(),
-                count.cast_signed(),
-            );
-        }
-    }
 }
 
 impl Drop for Buffer {

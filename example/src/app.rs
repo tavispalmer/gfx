@@ -1,4 +1,4 @@
-use std::{ffi::{c_void, CStr}, rc::Rc};
+use std::ffi::{c_void, CStr};
 
 use gfx::{Gfx, GfxGL, SpriteOptions, TextureGL};
 
