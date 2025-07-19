@@ -1,6 +1,6 @@
 // very *cool* name
 
-use std::{alloc::{self, alloc, dealloc, realloc, GlobalAlloc, Layout}, ffi::{c_void, CStr}, io::Write, marker::PhantomData, mem::{self, MaybeUninit}, ptr::{self, NonNull}, rc::Rc, slice};
+use std::{alloc::{alloc, dealloc, realloc, Layout}, mem::MaybeUninit, ptr::{self, NonNull}, rc::Rc, slice};
 
 use crate::{gfx::{buffer::Buffer, Quad, Shader, Vertex, VertexFormat, VertexUsage}, gl, GL};
 
@@ -58,32 +58,23 @@ impl<T: Vertex> QuadStream<T> {
             let new_vbo = Buffer::new(self.gl.clone(), self.buf_cap * size_of::<Quad<T>>(), gl::STREAM_DRAW);
             let new_ebo = Buffer::new(self.gl.clone(), self.buf_cap * 6 * size_of::<u16>(), gl::STATIC_DRAW);
 
-            // copy over already generated data
-            if let Some(ebo) = &self.ebo {
-                new_ebo.copy_from_buffer(ebo, 0, 0, ebo.size());
-            }
-
             // pre-generate new ebo entries
-            let begin = match &self.ebo {
-                Some(ebo) => ebo.size() / size_of::<u16>(),
-                None => 0,
-            };
-            let end = new_ebo.size() / size_of::<u16>();
-            let mut ebo_data = Box::new_uninit_slice(end-begin);
-            for i in begin/6..end/6 {
-                ebo_data[(i-begin)*6+0] = MaybeUninit::new((i*4+0) as u16);
-                ebo_data[(i-begin)*6+1] = MaybeUninit::new((i*4+1) as u16);
-                ebo_data[(i-begin)*6+2] = MaybeUninit::new((i*4+2) as u16);
-                ebo_data[(i-begin)*6+3] = MaybeUninit::new((i*4+1) as u16);
-                ebo_data[(i-begin)*6+4] = MaybeUninit::new((i*4+3) as u16);
-                ebo_data[(i-begin)*6+5] = MaybeUninit::new((i*4+2) as u16);
+            let len = new_ebo.size() / size_of::<u16>();
+            let mut ebo_data = Box::new_uninit_slice(len);
+            for i in 0..len/6 {
+                ebo_data[i*6+0] = MaybeUninit::new((i*4+0) as u16);
+                ebo_data[i*6+1] = MaybeUninit::new((i*4+1) as u16);
+                ebo_data[i*6+2] = MaybeUninit::new((i*4+2) as u16);
+                ebo_data[i*6+3] = MaybeUninit::new((i*4+1) as u16);
+                ebo_data[i*6+4] = MaybeUninit::new((i*4+3) as u16);
+                ebo_data[i*6+5] = MaybeUninit::new((i*4+2) as u16);
             }
             let ebo_data = ebo_data.assume_init();
 
             new_ebo.copy_from_slice(slice::from_raw_parts(
                 ebo_data.as_ptr().cast(),
                 ebo_data.len() / size_of::<u16>(),
-            ), begin * size_of::<u16>());
+            ), 0);
 
             // reset vertex attributes
             self.gl.bind_vertex_array(self.vao);

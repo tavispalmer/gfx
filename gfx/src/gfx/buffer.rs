@@ -1,4 +1,4 @@
-use std::{alloc::Layout, mem::{self, MaybeUninit}, num::NonZero, ops::{Bound, Index}, ptr, rc::Rc, slice::{self, SliceIndex}};
+use std::{mem::MaybeUninit, num::NonZero, ptr, rc::Rc, slice};
 
 use crate::{gl, GL};
 
@@ -11,11 +11,6 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    #[inline]
-    pub const fn id(&self) -> u32 {
-        self.buf.get()
-    }
-
     #[inline]
     pub const fn size(&self) -> usize {
         self.size

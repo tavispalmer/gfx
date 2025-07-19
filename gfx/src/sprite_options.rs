@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::TextureGL;
 
 pub struct SpriteOptions {

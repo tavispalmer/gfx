@@ -46,6 +46,10 @@ impl App {
                 .width(128)
                 .height(240)
                 .tex(self.tex.clone()));
+            gfx.draw(SpriteOptions::default()
+                .width(8)
+                .height(8)
+                .tex(self.tex.clone()));
             gfx.flush();
         }
     }
