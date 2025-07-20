@@ -61,13 +61,13 @@ impl Buffer {
         }
     }
 
-    pub fn copy_from_slice(&self, src: &[u8], offset: usize) {
+    pub fn copy_from_slice<T>(&self, src: &[T], offset: usize) {
         self.bind(gl::COPY_WRITE_BUFFER);
         unsafe {
             self.gl.buffer_sub_data(
                 gl::COPY_WRITE_BUFFER,
                 offset.cast_signed(),
-                src.len().cast_signed(),
+                (src.len() * size_of::<T>()).cast_signed(),
                 src.as_ptr().cast(),
             );
         }

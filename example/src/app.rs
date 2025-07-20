@@ -1,6 +1,6 @@
 use std::ffi::{c_void, CStr};
 
-use gfx::{Gfx, GfxGL, SpriteOptions, TextureGL};
+use gfx::{Color, Gfx, GfxGL, GfxSoftware, SpriteOptions, TextureGL};
 
 pub struct App {
     gfx: Option<GfxGL>,
@@ -21,7 +21,7 @@ impl App {
 
     pub fn context_reset<F: FnMut(&CStr) -> *const c_void>(&mut self, f: F) {
         self.gfx = Some(gfx::new_gl(f));
-        self.tex = Some(self.gfx.as_ref().unwrap().open_texture("awesomeface.png").unwrap());
+        self.tex = Some(self.gfx.as_ref().unwrap().load_texture("awesomeface.png").unwrap());
     }
 
     pub fn context_destroy(&mut self) {
@@ -37,7 +37,7 @@ impl App {
 
     pub fn run(&mut self) {
         if let Some(gfx) = &mut self.gfx {
-            gfx.clear(0);
+            gfx.clear(Color::PURPLE);
             gfx.draw(SpriteOptions::default()
                 .width(256)
                 .height(240)

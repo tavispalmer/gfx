@@ -1,4 +1,4 @@
-use std::{ffi::c_void, io::Result, mem::MaybeUninit, path::Path, rc::Rc};
+use std::{ffi::c_void, io::Result, mem::MaybeUninit, path::Path, rc::Rc, slice};
 
 use crate::{gl, GL};
 
@@ -20,19 +20,22 @@ impl Drop for TextureInner {
 pub struct TextureGL(Rc<TextureInner>);
 
 impl TextureGL {
-    pub fn open<P: AsRef<Path>>(gl: Rc<GL>, path: P) -> Result<Self> {
-        Self::open_erased(gl, path.as_ref())
+    pub fn load<P: AsRef<Path>>(gl: Rc<GL>, path: P) -> Result<Self> {
+        Self::load_erased(gl, path.as_ref())
     }
 
-    fn open_erased(gl: Rc<GL>, path: &Path) -> Result<Self> {
+    fn load_erased(gl: Rc<GL>, path: &Path) -> Result<Self> {
         // here we use stbi
         let image = stbi::load(path, None)?;
 
         // generate the opengl texture
         unsafe {
-            let mut textures = [0];
-            gl.gen_textures(&mut textures);
-            let tex = textures[0];
+            let mut textures = [MaybeUninit::uninit(); 1];
+            gl.gen_textures(slice::from_raw_parts_mut(
+                textures.as_mut_ptr().cast(),
+                textures.len(),
+            ));
+            let tex = textures[0].assume_init();
 
             gl.bind_texture(gl::TEXTURE_2D, tex);
 
@@ -48,13 +51,13 @@ impl TextureGL {
             gl.tex_image_2d(
                 gl::TEXTURE_2D,
                 0,
-                format as i32,
-                image.x() as i32,
-                image.y() as i32,
+                format as _,
+                image.x() as _,
+                image.y() as _,
                 0,
                 format,
                 gl::UNSIGNED_BYTE,
-                image.as_ptr() as *const c_void,
+                image.as_ptr().cast(),
             );
 
             Ok(Self(Rc::new(TextureInner {

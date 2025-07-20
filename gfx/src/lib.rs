@@ -1,30 +1,14 @@
-mod gfx {
-    mod buffer;
-    mod pos;
-    mod pos_tex;
-    mod quad;
-    mod quad_stream;
-    mod shader;
-    mod vertex_attrib;
-
-    pub use pos::Pos;
-    pub use pos_tex::PosTex;
-    pub use quad::Quad;
-    pub use quad_stream::QuadStream;
-    pub use shader::Shader;
-    pub use vertex_attrib::*;
-}
-
-use gfx::Quad;
-use gfx::QuadStream;
+use gl::Quad;
+use gl::QuadStream;
 use glm::mat4;
 use glm::vec2;
 
 mod color;
-pub mod gl;
+mod gl;
 mod sprite_options;
 mod texture;
 
+use std::mem::MaybeUninit;
 use std::path::Path;
 use std::{ffi::{c_void, CStr}, rc::Rc};
 
@@ -33,13 +17,52 @@ pub use gl::GL;
 pub use sprite_options::SpriteOptions;
 pub use texture::TextureGL;
 
-use crate::gfx::Pos;
-use crate::gfx::PosTex;
+use crate::gl::Pos;
+use crate::gl::PosTex;
 
 pub trait Gfx {
-    fn clear(&mut self, color: u32);
+    fn clear(&mut self, color: Color);
     fn draw(&mut self, sprite_options: &SpriteOptions);
     fn flush(&mut self);
+}
+
+pub struct GfxSoftware<'a> {
+    data: &'a mut [Color],
+    width: usize,
+    height: usize,
+    pitch: usize,
+}
+
+pub fn new(data: &mut [Color], width: usize, height: usize, pitch: usize) -> GfxSoftware<'_> {
+    GfxSoftware {
+        data,
+        width,
+        height,
+        pitch,
+    }
+}
+
+impl Gfx for GfxSoftware<'_> {
+    fn clear(&mut self, color: Color) {
+        let width = self.width * size_of::<Color>();
+        if self.pitch == width {
+            self.data.fill(color);
+        } else {
+            for line in 0..self.height {
+                let begin = line * self.pitch;
+                let end = begin + width;
+                self.data[begin..end].fill(color);
+            }
+        }
+    }
+
+    fn draw(&mut self, sprite_options: &SpriteOptions) {
+        
+    }
+
+    fn flush(&mut self) {
+        
+    }
 }
 
 pub struct GfxGL {
@@ -66,20 +89,20 @@ impl GfxGL {
         }
     }
 
-    pub fn open_texture<P: AsRef<Path>>(&self, path: P) -> Result<TextureGL, std::io::Error> {
-        TextureGL::open(Rc::clone(&self.gl), path)
+    pub fn load_texture<P: AsRef<Path>>(&self, path: P) -> Result<TextureGL, std::io::Error> {
+        TextureGL::load(Rc::clone(&self.gl), path)
     }
 }
 
 impl Gfx for GfxGL {
-    fn clear(&mut self, color: u32) {
+    fn clear(&mut self, color: Color) {
         unsafe {
             self.gl.bind_framebuffer(gl::FRAMEBUFFER, self.framebuffer);
             self.gl.clear_color(
-                0.3,
-                0.4,
-                0.5,
-                1.0,
+                color.r() as f32 / 255.0,
+                color.g() as f32 / 255.0,
+                color.b() as f32 / 255.0,
+                color.a() as f32 / 255.0,
             );
             self.gl.clear(
                 gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT | gl::STENCIL_BUFFER_BIT,

@@ -159,12 +159,12 @@ pub extern "C" fn retro_reset() {}
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_run() {
     unsafe {
-        #[allow(static_mut_refs)] {
-            APP.assume_init_mut().set_framebuffer(
-                HW_RENDER.get_current_framebuffer.unwrap_unchecked()() as u32,
-            );
-            APP.assume_init_mut().run();
-        }
+        #[allow(static_mut_refs)]
+        let app = APP.assume_init_mut();
+        app.set_framebuffer(
+            HW_RENDER.get_current_framebuffer.unwrap_unchecked()() as u32,
+        );
+        app.run();
         VIDEO_CB(
             retro::HW_FRAME_BUFFER_VALID,
             App::WIDTH as u32,
@@ -211,6 +211,9 @@ pub extern "C" fn retro_load_game(_game: *const retro::game_info) -> bool {
             return false;
         }
 
+        // initialize app
+        APP = MaybeUninit::new(App::new());
+
         // init hw context
         HW_RENDER.context_type = retro::HW_CONTEXT_OPENGL_CORE;
         HW_RENDER.version_major = 3;
@@ -228,9 +231,6 @@ pub extern "C" fn retro_load_game(_game: *const retro::game_info) -> bool {
             eprintln!("HW Context could not be initialized, exiting...");
             return false;
         }
-
-        // initialize app
-        APP = MaybeUninit::new(App::new());
     }
 
     eprintln!("Loaded game!");

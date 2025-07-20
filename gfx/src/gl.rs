@@ -1,3 +1,21 @@
+
+mod buffer;
+mod pos;
+mod pos_tex;
+mod quad;
+mod quad_stream;
+mod shader;
+mod vertex_attrib;
+
+pub use pos::Pos;
+pub use pos_tex::PosTex;
+pub use quad::Quad;
+pub use quad_stream::QuadStream;
+pub use shader::Shader;
+pub use vertex_attrib::*;
+
+// imports
+
 use std::{ffi::*, mem};
 
 // 116
@@ -30,6 +48,11 @@ pub const FLOAT: GLenum = 0x1406;
 pub const TRIANGLES: GLenum = 0x0004;
 // 267
 pub const DEPTH_TEST: GLenum = 0x0B71;
+// 337
+pub const BLEND: GLenum = 0x0BE2;
+// 344
+pub const SRC_ALPHA: GLenum = 0x0302;
+pub const ONE_MINUS_SRC_ALPHA: GLenum = 0x0303;
 // 446
 pub const RED: GLenum = 0x1903;
 // 468
@@ -62,10 +85,14 @@ pub const TEXTURE_BINDING_2D: GLenum = 0x8069;
 pub type PFNGLCLEARCOLORPROC = unsafe extern "system" fn(red: GLclampf, green: GLclampf, blue: GLclampf, alpha: GLclampf);
 // 747
 pub type PFNGLCLEARPROC = unsafe extern "system" fn(mask: GLbitfield);
+// 755
+pub type PFNGLBLENDFUNCPROC = unsafe extern "system" fn(sfactor: GLenum, dfactor: GLenum);
 // 791
 pub type PFNGLENABLEPROC = unsafe extern "system" fn(cap: GLenum);
 // 793
 pub type PFNGLDISABLEPROC = unsafe extern "system" fn(cap: GLenum);
+// 795
+pub type PFNGLISENABLEDPROC = unsafe extern "system" fn(cap: GLenum) -> GLboolean;
 // 809
 pub type PFNGLGETINTEGERVPROC = unsafe extern "system" fn(pname: GLenum, params: *mut GLint);
 // 824
@@ -166,8 +193,10 @@ pub const CONTEXT_LOST: GLenum = 0x0507;
 pub struct GL {
     clear_color: PFNGLCLEARCOLORPROC,
     clear: PFNGLCLEARPROC,
+    blend_func: PFNGLBLENDFUNCPROC,
     enable: PFNGLENABLEPROC,
     disable: PFNGLDISABLEPROC,
+    is_enabled: PFNGLISENABLEDPROC,
     get_integerv: PFNGLGETINTEGERVPROC,
     get_error: PFNGLGETERRORPROC,
     viewport: PFNGLVIEWPORTPROC,
@@ -242,6 +271,20 @@ impl GL {
                     mem::transmute(val)
                 }
             },
+            blend_func: unsafe {
+                unsafe extern "system" fn blend_func(
+                    _sfactor: GLenum,
+                    _dfactor: GLenum,
+                ) {
+                    panic!("Unable to load blend_func")
+                }
+                let val = f(c"glBlendFunc");
+                if val.is_null() {
+                    blend_func
+                } else {
+                    mem::transmute(val)
+                }
+            },
             enable: unsafe {
                 unsafe extern "system" fn enable(
                     _cap: GLenum,
@@ -264,6 +307,19 @@ impl GL {
                 let val = f(c"glDisable");
                 if val.is_null() {
                     disable
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            is_enabled: unsafe {
+                unsafe extern "system" fn is_enabled(
+                    _cap: GLenum,
+                ) -> GLboolean {
+                    panic!("Unable to load is_enabled")
+                }
+                let val = f(c"glIsEnabled");
+                if val.is_null() {
+                    is_enabled
                 } else {
                     mem::transmute(val)
                 }
@@ -839,6 +895,22 @@ impl GL {
     }
 
     #[inline]
+    pub unsafe fn blend_func(
+        &self,
+        sfactor: GLenum,
+        dfactor: GLenum,
+    ) {
+        unsafe {
+            (self.blend_func)(
+                sfactor,
+                dfactor,
+            );
+            #[cfg(debug_assertions)]
+            self.check_error("blend_func");
+        }
+    }
+
+    #[inline]
     pub unsafe fn enable(
         &self,
         cap: GLenum,
@@ -863,6 +935,21 @@ impl GL {
             );
             #[cfg(debug_assertions)]
             self.check_error("disable");
+        }
+    }
+
+    #[inline]
+    pub unsafe fn is_enabled(
+        &self,
+        cap: GLenum,
+    ) -> bool {
+        unsafe {
+            let ret = (self.is_enabled)(
+                cap,
+            );
+            #[cfg(debug_assertions)]
+            self.check_error("is_enabled");
+            ret != 0
         }
     }
 

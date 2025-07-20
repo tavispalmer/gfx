@@ -2,7 +2,7 @@
 
 use std::{alloc::{alloc, dealloc, realloc, Layout}, mem::MaybeUninit, ptr::{self, NonNull}, rc::Rc, slice};
 
-use crate::{gfx::{buffer::Buffer, Quad, Shader, Vertex, VertexFormat, VertexUsage}, gl, GL};
+use crate::{gl::{buffer::Buffer, Quad, Shader, Vertex, VertexFormat, VertexUsage}, gl, GL};
 
 pub struct QuadStream<T: Vertex> {
     // vtable
@@ -71,10 +71,7 @@ impl<T: Vertex> QuadStream<T> {
             }
             let ebo_data = ebo_data.assume_init();
 
-            new_ebo.copy_from_slice(slice::from_raw_parts(
-                ebo_data.as_ptr().cast(),
-                ebo_data.len() / size_of::<u16>(),
-            ), 0);
+            new_ebo.copy_from_slice(&ebo_data, 0);
 
             // reset vertex attributes
             self.gl.bind_vertex_array(self.vao);
@@ -160,12 +157,18 @@ impl<T: Vertex> QuadStream<T> {
             // copy over data
             if let Some(vbo) = &self.vbo {
                 vbo.copy_from_slice(slice::from_raw_parts(
-                    self.buf.as_ptr().cast(),
-                    self.buf_len * size_of::<Quad<T>>(),
+                    self.buf.as_ptr(),
+                    self.buf_len,
                 ), 0);
             }
 
             // draw elements
+            // need to turn on alpha blending (for textures)
+            if !self.gl.is_enabled(gl::BLEND) {
+                self.gl.enable(gl::BLEND);
+            }
+            self.gl.blend_func(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+
             // bind shader
             self.shader.bind();
 
