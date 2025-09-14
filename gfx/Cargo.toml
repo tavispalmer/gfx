@@ -1,0 +1,11 @@
+[package]
+name = "gfx"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "gfx"
+crate-type = ["staticlib"]
+
+[dependencies]
+glm = { git = "https://github.com/tavispalmer/glm-rs.git" }
