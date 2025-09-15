@@ -2,7 +2,7 @@
 #define _GFX_H
 
 #ifdef __cplusplus
-// extern "C" {
+extern "C" {
 #endif
 
 #include <stdalign.h>
@@ -29,7 +29,7 @@ void gfx_sprite(gfx_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h);
 void gfx_commit(gfx_t *gfx);
 
 #ifdef __cplusplus
-// }
+}
 #endif
 
 #endif
