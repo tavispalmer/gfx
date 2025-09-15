@@ -10,9 +10,10 @@ pub struct Context {
 impl Context {
     const VERTEX_SOURCE: &str =
 "#version 140
+uniform mat4 ortho;
 in vec4 position;
 void main() {
-    gl_Position = position;
+    gl_Position = ortho * position;
 }";
 
     const FRAGMENT_SOURCE: &str =
@@ -51,6 +52,10 @@ void main() {
         }
     }
 
+    pub fn view(&mut self, x: i32, y: i32, w: i32, h: i32) {
+        self.quad_stream.view(x as f32, y as f32, w as f32, h as f32)
+    }
+
     // clear screen
     pub fn clear(&self) {
         let gl = self.gl.as_ref();
@@ -60,8 +65,8 @@ void main() {
         }
     }
 
-    pub fn sprite(&mut self, x: f32, y: f32) {
-        self.quad_stream.write(&[Quad::new(x as f32, y as f32, 1.0 , 1.0)]);
+    pub fn sprite(&mut self, x: i32, y: i32, w: i32, h: i32) {
+        self.quad_stream.write(&[Quad::new(x as f32, y as f32, w as f32 , h as f32)]);
     }
 
     pub fn commit(&mut self) {

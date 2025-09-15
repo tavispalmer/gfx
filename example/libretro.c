@@ -16,6 +16,8 @@ static struct retro_hw_render_callback hw_render;
 
 static void context_reset(void) {
     gfx_context_reset(gfx, (const void *(*)(const char *))hw_render.get_proc_address);
+    gfx_viewport(gfx, 0, 0, 800, 600);
+    gfx_view(gfx, 0, 0, 800, 600);
 }
 
 static void context_destroy(void) {
@@ -92,9 +94,8 @@ void retro_reset(void) {
 
 void retro_run(void) {
     gfx_bind_framebuffer(gfx, hw_render.get_current_framebuffer());
-    gfx_viewport(gfx, 0, 0, 800, 600);
     gfx_clear(gfx);
-    gfx_sprite(gfx, 0, 0);
+    gfx_sprite(gfx, 0, 0, 16, 16);
     gfx_commit(gfx);
     video_cb(RETRO_HW_FRAME_BUFFER_VALID, 800, 600, 0);
 }

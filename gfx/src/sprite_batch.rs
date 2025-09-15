@@ -1,6 +1,60 @@
-use std::{mem::{self, MaybeUninit}, ptr, rc::Rc, slice};
+use std::{ffi::CStr, mem::{self, MaybeUninit}, ptr, rc::Rc, slice};
 
 use crate::{gl::{self, Gl}, shader::Shader};
+
+pub enum VertexElementFormat {
+    Single,
+    Vector2,
+    Vector3,
+    Vector4,
+}
+
+impl VertexElementFormat {
+    pub const fn size(&self) -> usize {
+        match self {
+            Self::Single => 1,
+            Self::Vector2 => 2,
+            Self::Vector3 => 3,
+            Self::Vector4 => 4,
+        }
+    }
+}
+
+pub enum VertexElementUsage {
+    Position,
+    TextureCoordinate,
+    Palette,
+}
+
+impl VertexElementUsage {
+    pub const fn name(&self) -> &'static CStr {
+        match self {
+            Self::Position => c"position",
+            Self::TextureCoordinate => c"texture_coordinate",
+            Self::Palette => c"palette",
+        }
+    }
+}
+
+pub struct VertexElement {
+    pub offset: usize,
+    pub format: VertexElementFormat,
+    pub usage: VertexElementUsage,
+}
+
+impl VertexElement {
+    pub const fn new(offset: usize, format: VertexElementFormat, usage: VertexElementUsage) -> Self {
+        Self {
+            offset,
+            format,
+            usage,
+        }
+    }
+}
+
+trait Vertex {
+    fn elements() -> &'static [VertexElement];
+}
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
@@ -13,6 +67,13 @@ impl VertexPosition {
         Self {
             position,
         }
+    }
+}
+
+impl Vertex for VertexPosition {
+    fn elements() -> &'static [VertexElement] {
+        const ELEMENTS: [VertexElement; 1] = [VertexElement::new(mem::offset_of!(VertexPosition, position), VertexElementFormat::Vector2, VertexElementUsage::Position)];
+        &ELEMENTS
     }
 }
 
@@ -46,6 +107,8 @@ pub struct QuadStream {
     vertex_array: u32,
     quad_buf: u32,
     index_buf: u32,
+    
+    ortho: u32,
 }
 
 impl QuadStream {
@@ -62,7 +125,7 @@ impl QuadStream {
         }
         let index = unsafe { index.assume_init() };
 
-        let (vertex_array, quad_buf, index_buf);
+        let (vertex_array, quad_buf, index_buf, ortho);
         unsafe {
             let mut vertex_arrays = [MaybeUninit::uninit(); 1];
             gl.gen_vertex_arrays(slice::from_raw_parts_mut(vertex_arrays.as_mut_ptr().cast(), vertex_arrays.len()));
@@ -91,11 +154,22 @@ impl QuadStream {
                 gl::STATIC_DRAW,
             );
 
-            let position = gl.get_attrib_location(shader.id(), c"position").cast_unsigned();
-            gl.vertex_attrib_pointer(position, 2, gl::FLOAT, false, size_of::<glm::vec2>() as i32, 0);
-            gl.enable_vertex_attrib_array(position);
+            for attrib in VertexPosition::elements() {
+                let index = gl.get_attrib_location(shader.id(), attrib.usage.name()).cast_unsigned();
+                gl.vertex_attrib_pointer(
+                    index,
+                    attrib.format.size() as i32,
+                    gl::FLOAT,
+                    false,
+                    size_of::<VertexPosition>() as i32,
+                    attrib.offset,
+                );
+                gl.enable_vertex_attrib_array(index);
+            }
 
             gl.bind_vertex_array(0);
+
+            ortho = gl.get_uniform_location(shader.id(), c"ortho").cast_unsigned();
         }
 
         Self {
@@ -106,6 +180,15 @@ impl QuadStream {
             vertex_array,
             quad_buf,
             index_buf,
+            ortho,
+        }
+    }
+
+    pub fn view(&mut self, x: f32, y: f32, w: f32, h: f32) {
+        let ortho = glm::mat4::<f32>::ortho(x, x + w, y + h, y);
+        unsafe {
+            self.gl.use_program(self.shader.id());
+            self.gl.uniform_matrix4fv(self.ortho.cast_signed(), 1, false, ortho.as_ptr().cast());
         }
     }
 

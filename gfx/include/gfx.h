@@ -20,9 +20,11 @@ void gfx_context_destroy(gfx_t *gfx);
 void gfx_bind_framebuffer(const gfx_t *gfx, uint32_t framebuffer);
 void gfx_viewport(const gfx_t *gfx, int32_t x, int32_t y, int32_t width, int32_t height);
 
+void gfx_view(gfx_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h);
+
 void gfx_clear(const gfx_t *gfx);
 
-void gfx_sprite(gfx_t *gfx, float x, float y);
+void gfx_sprite(gfx_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h);
 
 void gfx_commit(gfx_t *gfx);
 

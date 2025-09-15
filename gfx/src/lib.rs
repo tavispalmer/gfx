@@ -34,12 +34,16 @@ impl Gfx {
         self.context.as_ref().unwrap().viewport(x, y, width, height)
     }
 
+    pub fn view(&mut self, x: i32, y: i32, w: i32, h: i32) {
+        self.context.as_mut().unwrap().view(x, y, w, h)
+    }
+
     pub fn clear(&self) {
         self.context.as_ref().unwrap().clear()
     }
 
-    pub fn sprite(&mut self, x: f32, y: f32) {
-        self.context.as_mut().unwrap().sprite(x, y)
+    pub fn sprite(&mut self, x: i32, y: i32, w: i32, h: i32) {
+        self.context.as_mut().unwrap().sprite(x, y, w, h)
     }
 
     pub fn commit(&mut self) {
@@ -94,13 +98,18 @@ pub extern "C" fn gfx_viewport(gfx: &Gfx, x: i32, y: i32, width: i32, height: i3
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn gfx_view(gfx: &mut Gfx, x: i32, y: i32, w: i32, h: i32) {
+    gfx.view(x, y, w, h)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn gfx_clear(gfx: &Gfx) {
     gfx.clear()
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn gfx_sprite(gfx: &mut Gfx, x: f32, y: f32) {
-    gfx.sprite(x, y)
+pub extern "C" fn gfx_sprite(gfx: &mut Gfx, x: i32, y: i32, w: i32, h: i32) {
+    gfx.sprite(x, y, w, h)
 }
 
 #[unsafe(no_mangle)]
