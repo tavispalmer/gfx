@@ -1,4 +1,4 @@
-use std::{ffi::{c_void, CStr}, mem, ptr::NonNull, rc::Rc};
+use std::{ffi::{c_void, CStr}, rc::Rc};
 
 use crate::{gl::{self, Gl}, shader::Shader, sprite_batch::{Quad, QuadStream}};
 

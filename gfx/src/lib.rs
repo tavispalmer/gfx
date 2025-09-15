@@ -3,9 +3,9 @@ mod gl;
 mod shader;
 mod sprite_batch;
 
-use std::{ffi::{c_char, c_void, CStr}, mem::{self, MaybeUninit}, ptr::{self, NonNull}};
+use std::{ffi::{c_char, c_void, CStr}, mem::MaybeUninit, ptr};
 
-use crate::{context::Context, gl::Gl, shader::Shader};
+use crate::context::Context;
 
 pub struct Gfx {
     context: Option<Context>,
