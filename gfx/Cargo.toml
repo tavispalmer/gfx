@@ -5,7 +5,7 @@ edition = "2024"
 
 [lib]
 name = "gfx"
-crate-type = ["staticlib"]
+crate-type = ["rlib", "staticlib"]
 
 [dependencies]
 glm = { git = "https://github.com/tavispalmer/glm-rs.git" }
