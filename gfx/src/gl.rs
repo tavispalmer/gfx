@@ -55,10 +55,14 @@ pub const ARRAY_BUFFER: GLenum = 0x8892;
 pub const ELEMENT_ARRAY_BUFFER: GLenum = 0x8893;
 // 469
 pub const STREAM_DRAW: GLenum = 0x88E0;
-// 472
+pub const STREAM_READ: GLenum = 0x88E1;
+pub const STREAM_COPY: GLenum = 0x88E2;
 pub const STATIC_DRAW: GLenum = 0x88E4;
-// 475
+pub const STATIC_READ: GLenum = 0x88E5;
+pub const STATIC_COPY: GLenum = 0x88E6;
 pub const DYNAMIC_DRAW: GLenum = 0x88E8;
+pub const DYNAMIC_READ: GLenum = 0x88E9;
+pub const DYNAMIC_COPY: GLenum = 0x88EA;
 // 510
 pub type PFNGLBINDBUFFERPROC = unsafe extern "system" fn(target: GLenum, buffer: GLuint);
 pub type PFNGLDELETEBUFFERSPROC = unsafe extern "system" fn(n: GLsizei, buffers: *const GLuint);
@@ -113,6 +117,9 @@ pub type PFNGLBINDFRAMEBUFFERPROC = unsafe extern "system" fn(target: GLenum, fr
 pub type PFNGLBINDVERTEXARRAYPROC = unsafe extern "system" fn(array: GLuint);
 pub type PFNGLDELETEVERTEXARRAYSPROC = unsafe extern "system" fn(n: GLsizei, arrays: *const GLuint);
 pub type PFNGLGENVERTEXARRAYSPROC = unsafe extern "system" fn(n: GLsizei, arrays: *mut GLuint);
+// 1302
+pub const COPY_READ_BUFFER: GLenum = 0x8F36;
+pub const COPY_WRITE_BUFFER: GLenum = 0x8F37;
 // 2545
 pub const CONTEXT_LOST: GLenum = 0x0507;
 

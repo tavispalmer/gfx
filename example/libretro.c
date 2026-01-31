@@ -15,13 +15,13 @@ static retro_input_state_t input_state_cb;
 static struct retro_hw_render_callback hw_render;
 
 static void context_reset(void) {
-    gfx_context_reset(gfx, (const void *(*)(const char *))hw_render.get_proc_address);
+    gfx = gfx_new((const void *(*)(const char *))hw_render.get_proc_address);
     gfx_viewport(gfx, 0, 0, 800, 600);
     gfx_view(gfx, 0, 0, 800, 600);
 }
 
 static void context_destroy(void) {
-    gfx_context_destroy(gfx);
+    gfx_delete(gfx);
 }
 
 void retro_set_environment(retro_environment_t cb) {
@@ -127,8 +127,6 @@ bool retro_load_game(const struct retro_game_info *game) {
         return false;
     }
 
-    gfx = gfx_new();
-
     hw_render.context_type = RETRO_HW_CONTEXT_OPENGL_CORE;
     hw_render.version_major = 3;
     hw_render.version_minor = 1;
@@ -151,9 +149,7 @@ bool retro_load_game_special(unsigned game_type, const struct retro_game_info *i
     return false;
 }
 
-void retro_unload_game(void) {
-    gfx_delete(gfx);
-}
+void retro_unload_game(void) {}
 
 unsigned retro_get_region(void) {
     return RETRO_REGION_NTSC;

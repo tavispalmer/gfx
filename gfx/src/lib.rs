@@ -1,3 +1,4 @@
+mod buffer;
 mod context;
 mod gl;
 mod shader;
@@ -8,53 +9,45 @@ use std::{ffi::{c_char, c_void, CStr}, mem::MaybeUninit, ptr};
 use crate::context::Context;
 
 pub struct Gfx {
-    context: Option<Context>,
+    context: Context,
 }
 
 impl Gfx {
-    pub fn new() -> Self {
+    pub fn new<F: FnMut(&CStr) -> *const c_void>(f: F) -> Self {
         Self {
-            context: None,
+            context: Context::new(f),
         }
     }
 
-    pub fn context_reset<F: FnMut(&CStr) -> *const c_void>(&mut self, f: F) {
-        self.context = Some(Context::new(f))
-    }
-    
-    pub fn context_destroy(&mut self) {
-        self.context = None;
-    }
-
     pub fn bind_framebuffer(&self, framebuffer: u32) {
-        self.context.as_ref().unwrap().bind_framebuffer(framebuffer)
+        self.context.bind_framebuffer(framebuffer)
     }
 
     pub fn viewport(&self, x: i32, y: i32, width: i32, height: i32) {
-        self.context.as_ref().unwrap().viewport(x, y, width, height)
+        self.context.viewport(x, y, width, height)
     }
 
     pub fn view(&mut self, x: i32, y: i32, w: i32, h: i32) {
-        self.context.as_mut().unwrap().view(x, y, w, h)
+        self.context.view(x, y, w, h)
     }
 
     pub fn clear(&self) {
-        self.context.as_ref().unwrap().clear()
+        self.context.clear()
     }
 
     pub fn sprite(&mut self, x: i32, y: i32, w: i32, h: i32) {
-        self.context.as_mut().unwrap().sprite(x, y, w, h)
+        self.context.sprite(x, y, w, h)
     }
 
     pub fn commit(&mut self) {
-        self.context.as_mut().unwrap().commit()
+        self.context.commit()
     }
 }
 
 // c++ style init
 #[unsafe(no_mangle)]
-pub extern "C" fn gfx_init(gfx: &mut MaybeUninit<Gfx>) -> &mut Gfx {
-    gfx.write(Gfx::new());
+pub extern "C" fn gfx_init(gfx: &mut MaybeUninit<Gfx>, f: unsafe extern "C" fn(*const c_char) -> *const c_void) -> &mut Gfx {
+    gfx.write(Gfx::new(|s| unsafe { f(s.as_ptr()) }));
     unsafe {
         gfx.assume_init_mut()
     }
@@ -69,23 +62,13 @@ pub extern "C" fn gfx_deinit(gfx: &mut Gfx) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn gfx_new() -> Box<Gfx> {
-    Box::new(Gfx::new())
+pub extern "C" fn gfx_new(f: unsafe extern "C" fn(*const c_char) -> *const c_void) -> Box<Gfx> {
+    Box::new(Gfx::new(|s| unsafe { f(s.as_ptr()) }))
 }
 
 #[allow(unused_variables)]
 #[unsafe(no_mangle)]
 pub extern "C" fn gfx_delete(gfx: Box<Gfx>) {}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn gfx_context_reset(gfx: &mut Gfx, f: unsafe extern "C" fn(*const c_char) -> *const c_void) {
-    gfx.context_reset(|s| unsafe { f(s.as_ptr()) })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn gfx_context_destroy(gfx: &mut Gfx) {
-    gfx.context_destroy()
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn gfx_bind_framebuffer(gfx: &Gfx, framebuffer: u32) {

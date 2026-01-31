@@ -11,11 +11,8 @@ extern "C" {
 
 typedef struct gfx gfx_t;
 
-gfx_t *gfx_new(void);
+gfx_t *gfx_new(const void *f(const char *));
 void gfx_delete(gfx_t *gfx);
-
-void gfx_context_reset(gfx_t *gfx, const void *f(const char *));
-void gfx_context_destroy(gfx_t *gfx);
 
 void gfx_bind_framebuffer(const gfx_t *gfx, uint32_t framebuffer);
 void gfx_viewport(const gfx_t *gfx, int32_t x, int32_t y, int32_t width, int32_t height);
