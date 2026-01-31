@@ -156,6 +156,7 @@ pub struct QuadStream {
     vertex_array: u32,
     quad_buf: u32,
     index_buf: u32,
+    buf_cap: usize,
 
     ortho: u32,
 }
@@ -163,16 +164,7 @@ pub struct QuadStream {
 impl QuadStream {
     pub fn new(gl: Rc<Gl>, shader: Shader) -> Self {
         let quad_vec = Vec::with_capacity(256);
-        let mut index = Box::new_uninit_slice(6 * quad_vec.capacity());
-        for i in 0..quad_vec.capacity() {
-            index[i * 6 + 0] = MaybeUninit::new((i * 4 + 0) as u16);
-            index[i * 6 + 1] = MaybeUninit::new((i * 4 + 1) as u16);
-            index[i * 6 + 2] = MaybeUninit::new((i * 4 + 2) as u16);
-            index[i * 6 + 3] = MaybeUninit::new((i * 4 + 1) as u16);
-            index[i * 6 + 4] = MaybeUninit::new((i * 4 + 3) as u16);
-            index[i * 6 + 5] = MaybeUninit::new((i * 4 + 2) as u16);
-        }
-        let index = unsafe { index.assume_init() };
+        let index = Vec::new().into_boxed_slice();
 
         let (vertex_array, quad_buf, index_buf, ortho);
         unsafe {
@@ -192,22 +184,8 @@ impl QuadStream {
             index_buf = buffers[1].assume_init();
 
             gl.bind_vertex_array(vertex_array);
-
             gl.bind_buffer(gl::ARRAY_BUFFER, quad_buf);
-            gl.buffer_data(
-                gl::ARRAY_BUFFER,
-                (quad_vec.capacity() * size_of::<Quad>()).cast_signed(),
-                ptr::null(),
-                gl::DYNAMIC_DRAW,
-            );
-
             gl.bind_buffer(gl::ELEMENT_ARRAY_BUFFER, index_buf);
-            gl.buffer_data(
-                gl::ELEMENT_ARRAY_BUFFER,
-                (index.len() * size_of::<u16>()).cast_signed(),
-                index.as_ptr().cast(),
-                gl::STATIC_DRAW,
-            );
 
             for attrib in VertexPositionTexture::elements() {
                 let index = gl
@@ -239,6 +217,7 @@ impl QuadStream {
             vertex_array,
             quad_buf,
             index_buf,
+            buf_cap: 0,
             ortho,
         }
     }
@@ -257,6 +236,40 @@ impl QuadStream {
     }
 
     pub fn flush(&mut self) {
+        // resize
+        if self.quad_vec.capacity() > self.buf_cap {
+            self.buf_cap = self.quad_vec.capacity();
+            let mut index = Box::new_uninit_slice(6 * self.buf_cap);
+            for i in 0..self.buf_cap {
+                index[i * 6 + 0] = MaybeUninit::new((i * 4 + 0) as u16);
+                index[i * 6 + 1] = MaybeUninit::new((i * 4 + 1) as u16);
+                index[i * 6 + 2] = MaybeUninit::new((i * 4 + 2) as u16);
+                index[i * 6 + 3] = MaybeUninit::new((i * 4 + 1) as u16);
+                index[i * 6 + 4] = MaybeUninit::new((i * 4 + 3) as u16);
+                index[i * 6 + 5] = MaybeUninit::new((i * 4 + 2) as u16);
+            }
+            self.index = unsafe { index.assume_init() };
+
+            unsafe {
+                self.gl.bind_buffer(gl::ARRAY_BUFFER, self.quad_buf);
+                self.gl.buffer_data(
+                    gl::ARRAY_BUFFER,
+                    (self.buf_cap * size_of::<Quad>()).cast_signed(),
+                    ptr::null(),
+                    gl::DYNAMIC_DRAW,
+                );
+
+                self.gl
+                    .bind_buffer(gl::ELEMENT_ARRAY_BUFFER, self.index_buf);
+                self.gl.buffer_data(
+                    gl::ELEMENT_ARRAY_BUFFER,
+                    (self.index.len() * size_of::<u16>()).cast_signed(),
+                    self.index.as_ptr().cast(),
+                    gl::STATIC_DRAW,
+                );
+            }
+        }
+
         unsafe {
             self.gl.bind_buffer(gl::ARRAY_BUFFER, self.quad_buf);
             self.gl.buffer_sub_data(
