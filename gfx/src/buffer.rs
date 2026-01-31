@@ -24,7 +24,10 @@ impl Buffer {
         let buffer;
         unsafe {
             let mut buffers = [MaybeUninit::uninit()];
-            gl.gen_buffers(slice::from_raw_parts_mut(buffers.as_mut_ptr().cast(), buffers.len()));
+            gl.gen_buffers(slice::from_raw_parts_mut(
+                buffers.as_mut_ptr().cast(),
+                buffers.len(),
+            ));
             buffer = buffers[0].assume_init();
 
             gl.bind_buffer(gl::COPY_READ_BUFFER, buffer);
@@ -46,17 +49,17 @@ impl Buffer {
             );
         }
 
-        Self {
-            gl,
-            buffer,
-        }
+        Self { gl, buffer }
     }
 
     pub fn new_uninit(gl: Rc<Gl>, len: usize, usage: BufferUsage) -> Self {
         let buffer;
         unsafe {
             let mut buffers = [MaybeUninit::uninit()];
-            gl.gen_buffers(slice::from_raw_parts_mut(buffers.as_mut_ptr().cast(), buffers.len()));
+            gl.gen_buffers(slice::from_raw_parts_mut(
+                buffers.as_mut_ptr().cast(),
+                buffers.len(),
+            ));
             buffer = buffers[0].assume_init();
 
             gl.bind_buffer(gl::COPY_READ_BUFFER, buffer);
@@ -78,10 +81,7 @@ impl Buffer {
             );
         }
 
-        Self {
-            gl,
-            buffer,
-        }
+        Self { gl, buffer }
     }
 
     pub fn copy_from_slice<T: Copy>(&self, offset: usize, slice: &[T]) {
@@ -100,8 +100,6 @@ impl Buffer {
 impl Drop for Buffer {
     #[inline]
     fn drop(&mut self) {
-        unsafe {
-            self.gl.delete_buffers(&[self.buffer])
-        }
+        unsafe { self.gl.delete_buffers(&[self.buffer]) }
     }
 }

@@ -1,4 +1,10 @@
-use std::{ffi::{c_char, c_double, c_float, c_int, c_schar, c_short, c_uchar, c_uint, c_ushort, c_void, CStr}, mem::{self, MaybeUninit}, ptr};
+use std::{
+    ffi::{
+        CStr, c_char, c_double, c_float, c_int, c_schar, c_short, c_uchar, c_uint, c_ushort, c_void,
+    },
+    mem::{self, MaybeUninit},
+    ptr,
+};
 
 pub type GLenum = c_uint;
 pub type GLboolean = c_uchar;
@@ -16,12 +22,25 @@ pub type GLclampf = c_float;
 pub type GLdouble = c_double;
 pub type GLclampd = c_double;
 
+pub const UNSIGNED_BYTE: GLenum = 0x1401;
 // 141
 pub const UNSIGNED_SHORT: GLenum = 0x1403;
 // 144
 pub const FLOAT: GLenum = 0x1406;
 // 155
 pub const TRIANGLES: GLenum = 0x0004;
+// 446
+pub const RED: GLenum = 0x1903;
+// 468
+pub const RGB: GLenum = 0x1907;
+pub const RGBA: GLenum = 0x1908;
+// 611
+pub const TEXTURE_2D: GLenum = 0x0DE1;
+// 614
+pub const TEXTURE_MAG_FILTER: GLenum = 0x2800;
+pub const TEXTURE_MIN_FILTER: GLenum = 0x2801;
+// 644
+pub const NEAREST: GLenum = 0x2600;
 // 654
 pub const NO_ERROR: GLenum = 0;
 pub const INVALID_ENUM: GLenum = 0x0500;
@@ -33,7 +52,8 @@ pub const OUT_OF_MEMORY: GLenum = 0x0505;
 // 677
 pub const COLOR_BUFFER_BIT: GLbitfield = 0x00004000;
 
-pub type PFNGLCLEARCOLORPROC = unsafe extern "system" fn(red: GLclampf, green: GLclampf, blue: GLclampf, alpha: GLclampf);
+pub type PFNGLCLEARCOLORPROC =
+    unsafe extern "system" fn(red: GLclampf, green: GLclampf, blue: GLclampf, alpha: GLclampf);
 pub type PFNGLCLEARPROC = unsafe extern "system" fn(mask: GLbitfield);
 // 786
 pub type PFNGLENABLEPROC = unsafe extern "system" fn(cap: GLenum);
@@ -42,10 +62,32 @@ pub type PFNGLDISABLEPROC = unsafe extern "system" fn(cap: GLenum);
 pub type PFNGLGETERRORPROC = unsafe extern "system" fn() -> GLenum;
 pub type PFNGLGETSTRINGPROC = unsafe extern "system" fn(name: GLenum) -> *const GLubyte;
 // 866
-pub type PFNGLVIEWPORTPROC = unsafe extern "system" fn(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
+pub type PFNGLVIEWPORTPROC =
+    unsafe extern "system" fn(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
 // 1135
-pub type PFNGLDRAWARRAYSPROC = unsafe extern "system" fn(mode: GLenum, first: GLint, count: GLsizei);
-pub type PFNGLDRAWELEMENTSPROC = unsafe extern "system" fn(mode: GLenum, count: GLsizei, type_: GLenum, indices: *const GLvoid);
+pub type PFNGLDRAWARRAYSPROC =
+    unsafe extern "system" fn(mode: GLenum, first: GLint, count: GLsizei);
+pub type PFNGLDRAWELEMENTSPROC =
+    unsafe extern "system" fn(mode: GLenum, count: GLsizei, type_: GLenum, indices: *const GLvoid);
+// 1265
+pub type PFNGLTEXPARAMETERIPROC =
+    unsafe extern "system" fn(target: GLenum, pname: GLenum, param: GLint);
+// 1289
+pub type PFNGLTEXIMAGE2DPROC = unsafe extern "system" fn(
+    target: GLenum,
+    level: GLint,
+    internal_format: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+    format: GLenum,
+    type_: GLenum,
+    pixels: *const GLvoid,
+);
+// 1302
+pub type PFNGLGENTEXTURESPROC = unsafe extern "system" fn(n: GLsizei, textures: *mut GLuint);
+pub type PFNGLDELETETEXTURESPROC = unsafe extern "system" fn(n: GLsizei, textures: *const GLuint);
+pub type PFNGLBINDTEXTUREPROC = unsafe extern "system" fn(target: GLenum, texture: GLuint);
 
 // 450
 pub type GLsizeiptr = isize;
@@ -68,8 +110,14 @@ pub type PFNGLBINDBUFFERPROC = unsafe extern "system" fn(target: GLenum, buffer:
 pub type PFNGLDELETEBUFFERSPROC = unsafe extern "system" fn(n: GLsizei, buffers: *const GLuint);
 pub type PFNGLGENBUFFERSPROC = unsafe extern "system" fn(n: GLsizei, buffers: *mut GLuint);
 // 514
-pub type PFNGLBUFFERDATAPROC = unsafe extern "system" fn(target: GLenum, size: GLsizeiptr, data: *const c_void, usage: GLenum);
-pub type PFNGLBUFFERSUBDATAPROC = unsafe extern "system" fn(target: GLenum, offset: GLintptr, size: GLsizeiptr, data: *const c_void);
+pub type PFNGLBUFFERDATAPROC =
+    unsafe extern "system" fn(target: GLenum, size: GLsizeiptr, data: *const c_void, usage: GLenum);
+pub type PFNGLBUFFERSUBDATAPROC = unsafe extern "system" fn(
+    target: GLenum,
+    offset: GLintptr,
+    size: GLsizeiptr,
+    data: *const c_void,
+);
 // 546
 pub type GLchar = c_char;
 // 580
@@ -92,25 +140,58 @@ pub type PFNGLDELETESHADERPROC = unsafe extern "system" fn(shader: GLuint);
 pub type PFNGLDISABLEVERTEXATTRIBARRAYPROC = unsafe extern "system" fn(index: GLuint);
 pub type PFNGLENABLEVERTEXATTRIBARRAYPROC = unsafe extern "system" fn(index: GLuint);
 // 649
-pub type PFNGLGETATTRIBLOCATIONPROC = unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
-pub type PFNGLGETPROGRAMIVPROC = unsafe extern "system" fn(program: GLuint, pname: GLenum, params: *mut GLint);
-pub type PFNGLGETPROGRAMINFOLOGPROC = unsafe extern "system" fn(prgoram: GLuint, buf_size: GLsizei, length: *mut GLsizei, info_log: *mut GLchar);
-pub type PFNGLGETSHADERIVPROC = unsafe extern "system" fn(shader: GLuint, pname: GLenum, params: *mut GLint);
-pub type PFNGLGETSHADERINFOLOGPROC = unsafe extern "system" fn(shader: GLuint, buf_size: GLsizei, length: *mut GLsizei, info_log: *mut GLchar);
+pub type PFNGLGETATTRIBLOCATIONPROC =
+    unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
+pub type PFNGLGETPROGRAMIVPROC =
+    unsafe extern "system" fn(program: GLuint, pname: GLenum, params: *mut GLint);
+pub type PFNGLGETPROGRAMINFOLOGPROC = unsafe extern "system" fn(
+    prgoram: GLuint,
+    buf_size: GLsizei,
+    length: *mut GLsizei,
+    info_log: *mut GLchar,
+);
+pub type PFNGLGETSHADERIVPROC =
+    unsafe extern "system" fn(shader: GLuint, pname: GLenum, params: *mut GLint);
+pub type PFNGLGETSHADERINFOLOGPROC = unsafe extern "system" fn(
+    shader: GLuint,
+    buf_size: GLsizei,
+    length: *mut GLsizei,
+    info_log: *mut GLchar,
+);
 // 655
-pub type PFNGLGETUNIFORMLOCATIONPROC = unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
+pub type PFNGLGETUNIFORMLOCATIONPROC =
+    unsafe extern "system" fn(program: GLuint, name: *const GLchar) -> GLint;
 // 664
 pub type PFNGLLINKPROGRAMPROC = unsafe extern "system" fn(program: GLuint);
-pub type PFNGLSHADERSOURCEPROC = unsafe extern "system" fn(shader: GLuint, count: GLsizei, string: *const *const GLchar, length: *const GLint);
+pub type PFNGLSHADERSOURCEPROC = unsafe extern "system" fn(
+    shader: GLuint,
+    count: GLsizei,
+    string: *const *const GLchar,
+    length: *const GLint,
+);
 pub type PFNGLUSEPROGRAMPROC = unsafe extern "system" fn(program: GLuint);
 // 685
-pub type PFNGLUNIFORMMATRIX4FVPROC = unsafe extern "system" fn(location: GLint, count: GLsizei, transpose: GLboolean, value: *const GLfloat);
+pub type PFNGLUNIFORMMATRIX4FVPROC = unsafe extern "system" fn(
+    location: GLint,
+    count: GLsizei,
+    transpose: GLboolean,
+    value: *const GLfloat,
+);
 // 723
-pub type PFNGLVERTEXATTRIBPOINTERPROC = unsafe extern "system" fn(index: GLuint, size: GLint, type_: GLenum, normalized: GLboolean, stride: GLsizei, pointer: *const c_void);
+pub type PFNGLVERTEXATTRIBPOINTERPROC = unsafe extern "system" fn(
+    index: GLuint,
+    size: GLint,
+    type_: GLenum,
+    normalized: GLboolean,
+    stride: GLsizei,
+    pointer: *const c_void,
+);
 // 968
 pub const INVALID_FRAMEBUFFER_OPERATION: GLenum = 0x0506;
 // 1044
 pub const FRAMEBUFFER: GLenum = 0x8D40;
+// 1076
+pub const RG: GLenum = 0x8227;
 // 1167
 pub type PFNGLBINDFRAMEBUFFERPROC = unsafe extern "system" fn(target: GLenum, framebuffer: GLuint);
 // 1182
@@ -134,6 +215,11 @@ pub struct Gl {
     viewport: PFNGLVIEWPORTPROC,
     draw_arrays: PFNGLDRAWARRAYSPROC,
     draw_elements: PFNGLDRAWELEMENTSPROC,
+    tex_parameteri: PFNGLTEXPARAMETERIPROC,
+    tex_image_2d: PFNGLTEXIMAGE2DPROC,
+    gen_textures: PFNGLGENTEXTURESPROC,
+    delete_textures: PFNGLDELETETEXTURESPROC,
+    bind_texture: PFNGLBINDTEXTUREPROC,
 
     bind_buffer: PFNGLBINDBUFFERPROC,
     delete_buffers: PFNGLDELETEBUFFERSPROC,
@@ -189,9 +275,7 @@ impl Gl {
                 }
             },
             clear: unsafe {
-                unsafe extern "system" fn clear(
-                    _mask: GLbitfield,
-                ) {
+                unsafe extern "system" fn clear(_mask: GLbitfield) {
                     panic!("Unable to load clear")
                 }
                 let val = f(c"glClear");
@@ -202,9 +286,7 @@ impl Gl {
                 }
             },
             enable: unsafe {
-                unsafe extern "system" fn enable(
-                    _cap: GLenum,
-                ) {
+                unsafe extern "system" fn enable(_cap: GLenum) {
                     panic!("Unable to load enable")
                 }
                 let val = f(c"glEnable");
@@ -215,9 +297,7 @@ impl Gl {
                 }
             },
             disable: unsafe {
-                unsafe extern "system" fn disable(
-                    _cap: GLenum,
-                ) {
+                unsafe extern "system" fn disable(_cap: GLenum) {
                     panic!("Unable to load disable")
                 }
                 let val = f(c"glDisable");
@@ -239,9 +319,7 @@ impl Gl {
                 }
             },
             get_string: unsafe {
-                unsafe extern "system" fn get_string(
-                    _name: GLenum,
-                ) -> *const GLubyte {
+                unsafe extern "system" fn get_string(_name: GLenum) -> *const GLubyte {
                     panic!("Unable to load get_string")
                 }
                 let val = f(c"glGetString");
@@ -298,11 +376,77 @@ impl Gl {
                     mem::transmute(val)
                 }
             },
-            bind_buffer: unsafe {
-                unsafe extern "system" fn bind_buffer(
+            tex_parameteri: unsafe {
+                unsafe extern "system" fn tex_parameteri(
                     _target: GLenum,
-                    _buffer: GLuint,
+                    _pname: GLenum,
+                    _param: GLint,
                 ) {
+                    panic!("Unable to load tex_parameteri")
+                }
+                let val = f(c"glTexParameteri");
+                if val.is_null() {
+                    tex_parameteri
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            tex_image_2d: unsafe {
+                unsafe extern "system" fn tex_image_2d(
+                    _target: GLenum,
+                    _level: GLint,
+                    _internal_format: GLint,
+                    _width: GLsizei,
+                    _height: GLsizei,
+                    _border: GLint,
+                    _format: GLenum,
+                    _type: GLenum,
+                    _pixels: *const GLvoid,
+                ) {
+                    panic!("Unable to load tex_image_2d")
+                }
+                let val = f(c"glTexImage2D");
+                if val.is_null() {
+                    tex_image_2d
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            gen_textures: unsafe {
+                unsafe extern "system" fn gen_textures(_n: GLsizei, _textures: *mut GLuint) {
+                    panic!("Unable to load gen_textures")
+                }
+                let val = f(c"glGenTextures");
+                if val.is_null() {
+                    gen_textures
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            delete_textures: unsafe {
+                unsafe extern "system" fn delete_textures(_n: GLsizei, _textures: *const GLuint) {
+                    panic!("Unable to load delete_textures")
+                }
+                let val = f(c"glDeleteTextures");
+                if val.is_null() {
+                    delete_textures
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            bind_texture: unsafe {
+                unsafe extern "system" fn bind_texture(_target: GLenum, _texture: GLuint) {
+                    panic!("Unable to load bind_texture")
+                }
+                let val = f(c"glBindTexture");
+                if val.is_null() {
+                    bind_texture
+                } else {
+                    mem::transmute(val)
+                }
+            },
+            bind_buffer: unsafe {
+                unsafe extern "system" fn bind_buffer(_target: GLenum, _buffer: GLuint) {
                     panic!("Unable to load bind_buffer")
                 }
                 let val = f(c"glBindBuffer");
@@ -313,10 +457,7 @@ impl Gl {
                 }
             },
             delete_buffers: unsafe {
-                unsafe extern "system" fn delete_buffers(
-                    _n: GLsizei,
-                    _buffers: *const GLuint,
-                ) {
+                unsafe extern "system" fn delete_buffers(_n: GLsizei, _buffers: *const GLuint) {
                     panic!("Unable to load delete_buffers")
                 }
                 let val = f(c"glDeleteBuffers");
@@ -327,10 +468,7 @@ impl Gl {
                 }
             },
             gen_buffers: unsafe {
-                unsafe extern "system" fn gen_buffers(
-                    _n: GLsizei,
-                    _buffers: *mut GLuint,
-                ) {
+                unsafe extern "system" fn gen_buffers(_n: GLsizei, _buffers: *mut GLuint) {
                     panic!("Unable to load gen_buffers")
                 }
                 let val = f(c"glGenBuffers");
@@ -373,10 +511,7 @@ impl Gl {
                 }
             },
             attach_shader: unsafe {
-                unsafe extern "system" fn attach_shader(
-                    _program: GLuint,
-                    _shader: GLuint,
-                ) {
+                unsafe extern "system" fn attach_shader(_program: GLuint, _shader: GLuint) {
                     panic!("Unable to load attach_shader")
                 }
                 let val = f(c"glAttachShader");
@@ -387,9 +522,7 @@ impl Gl {
                 }
             },
             compile_shader: unsafe {
-                unsafe extern "system" fn compile_shader(
-                    _shader: GLuint
-                ) {
+                unsafe extern "system" fn compile_shader(_shader: GLuint) {
                     panic!("Unable to load compile_shader")
                 }
                 let val = f(c"glCompileShader");
@@ -411,9 +544,7 @@ impl Gl {
                 }
             },
             create_shader: unsafe {
-                unsafe extern "system" fn create_shader(
-                    _type: GLenum,
-                ) -> GLuint {
+                unsafe extern "system" fn create_shader(_type: GLenum) -> GLuint {
                     panic!("Unable to load create_shader")
                 }
                 let val = f(c"glCreateShader");
@@ -424,9 +555,7 @@ impl Gl {
                 }
             },
             delete_program: unsafe {
-                unsafe extern "system" fn delete_program(
-                    _program: GLuint,
-                ) {
+                unsafe extern "system" fn delete_program(_program: GLuint) {
                     panic!("Unable to load delete_program")
                 }
                 let val = f(c"glDeleteProgram");
@@ -437,9 +566,7 @@ impl Gl {
                 }
             },
             delete_shader: unsafe {
-                unsafe extern "system" fn delete_shader(
-                    _shader: GLuint,
-                ) {
+                unsafe extern "system" fn delete_shader(_shader: GLuint) {
                     panic!("Unable to load delete_shader")
                 }
                 let val = f(c"glDeleteShader");
@@ -450,9 +577,7 @@ impl Gl {
                 }
             },
             disable_vertex_attrib_array: unsafe {
-                unsafe extern "system" fn disable_vertex_attrib_array(
-                    _index: GLuint,
-                ) {
+                unsafe extern "system" fn disable_vertex_attrib_array(_index: GLuint) {
                     panic!("Unable to load disable_vertex_attrib_array")
                 }
                 let val = f(c"glDisableVertexAttribArray");
@@ -463,9 +588,7 @@ impl Gl {
                 }
             },
             enable_vertex_attrib_array: unsafe {
-                unsafe extern "system" fn enable_vertex_attrib_array(
-                    _index: GLuint,
-                ) {
+                unsafe extern "system" fn enable_vertex_attrib_array(_index: GLuint) {
                     panic!("Unable to load enable_vertex_attrib_array")
                 }
                 let val = f(c"glEnableVertexAttribArray");
@@ -566,9 +689,7 @@ impl Gl {
                 }
             },
             link_program: unsafe {
-                unsafe extern "system" fn link_program(
-                    _program: GLuint,
-                ) {
+                unsafe extern "system" fn link_program(_program: GLuint) {
                     panic!("Unable to load link_program")
                 }
                 let val = f(c"glLinkProgram");
@@ -595,9 +716,7 @@ impl Gl {
                 }
             },
             use_program: unsafe {
-                unsafe extern "system" fn use_program(
-                    _program: GLuint,
-                ) {
+                unsafe extern "system" fn use_program(_program: GLuint) {
                     panic!("Unable to load use_program")
                 }
                 let val = f(c"glUseProgram");
@@ -642,10 +761,7 @@ impl Gl {
                 }
             },
             bind_framebuffer: unsafe {
-                unsafe extern "system" fn bind_framebuffer(
-                    _target: GLenum,
-                    _framebuffer: GLuint,
-                ) {
+                unsafe extern "system" fn bind_framebuffer(_target: GLenum, _framebuffer: GLuint) {
                     panic!("Unable to load bind_framebuffer")
                 }
                 let val = f(c"glBindFramebuffer");
@@ -656,17 +772,15 @@ impl Gl {
                 }
             },
             bind_vertex_array: unsafe {
-                 unsafe extern "system" fn bind_vertex_array(
-                    _array: GLuint,
-                 ) {
+                unsafe extern "system" fn bind_vertex_array(_array: GLuint) {
                     panic!("Unable to load bind_vertex_array")
-                 }
-                 let val = f(c"glBindVertexArray");
-                 if val.is_null() {
+                }
+                let val = f(c"glBindVertexArray");
+                if val.is_null() {
                     bind_vertex_array
-                 } else {
+                } else {
                     mem::transmute(val)
-                 }
+                }
             },
             delete_vertex_arrays: unsafe {
                 unsafe extern "system" fn delete_vertex_arrays(
@@ -683,10 +797,7 @@ impl Gl {
                 }
             },
             gen_vertex_arrays: unsafe {
-                unsafe extern "system" fn gen_vertex_arrays(
-                    _n: GLsizei,
-                    _arrays: *mut GLuint,
-                ) {
+                unsafe extern "system" fn gen_vertex_arrays(_n: GLsizei, _arrays: *mut GLuint) {
                     panic!("Unable to load gen_vertex_arrays")
                 }
                 let val = f(c"glGenVertexArrays");
@@ -705,22 +816,31 @@ impl Gl {
         unsafe {
             let error = self.get_error();
             match error {
-                NO_ERROR => {},
+                NO_ERROR => {}
                 INVALID_ENUM => panic!(concat!("{}: ", stringify!(INVALID_ENUM)), func),
                 INVALID_VALUE => panic!(concat!("{}: ", stringify!(INVALID_VALUE)), func),
                 INVALID_OPERATION => panic!(concat!("{}: ", stringify!(INVALID_OPERATION)), func),
                 STACK_OVERFLOW => panic!(concat!("{}: ", stringify!(STACK_OVERFLOW)), func),
                 STACK_UNDERFLOW => panic!(concat!("{}: ", stringify!(STACK_UNDERFLOW)), func),
                 OUT_OF_MEMORY => panic!(concat!("{}: ", stringify!(OUT_OF_MEMORY)), func),
-                INVALID_FRAMEBUFFER_OPERATION => panic!(concat!("{}: ", stringify!(INVALID_FRAMEBUFFER_OPERATION)), func),
+                INVALID_FRAMEBUFFER_OPERATION => panic!(
+                    concat!("{}: ", stringify!(INVALID_FRAMEBUFFER_OPERATION)),
+                    func
+                ),
                 CONTEXT_LOST => panic!(concat!("{}: ", stringify!(CONTEXT_LOST)), func),
-                _ => panic!("{func}: unknown error")
+                _ => panic!("{func}: unknown error"),
             }
         }
     }
 
     #[inline]
-    pub unsafe fn clear_color(&self, red: GLclampf, green: GLclampf, blue: GLclampf, alpha: GLclampf) {
+    pub unsafe fn clear_color(
+        &self,
+        red: GLclampf,
+        green: GLclampf,
+        blue: GLclampf,
+        alpha: GLclampf,
+    ) {
         unsafe {
             (self.clear_color)(red, green, blue, alpha);
             #[cfg(debug_assertions)]
@@ -753,15 +873,11 @@ impl Gl {
     }
     #[inline]
     pub unsafe fn get_error(&self) -> GLenum {
-        unsafe {
-            (self.get_error)()
-        }
+        unsafe { (self.get_error)() }
     }
     #[inline]
     pub unsafe fn get_string(&self, name: GLenum) -> &CStr {
-        unsafe {
-            CStr::from_ptr((self.get_string)(name).cast())
-        }
+        unsafe { CStr::from_ptr((self.get_string)(name).cast()) }
     }
     #[inline]
     pub unsafe fn viewport(&self, x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
@@ -780,11 +896,78 @@ impl Gl {
         }
     }
     #[inline]
-    pub unsafe fn draw_elements(&self, mode: GLenum, count: GLsizei, type_: GLenum, indices: usize) {
+    pub unsafe fn draw_elements(
+        &self,
+        mode: GLenum,
+        count: GLsizei,
+        type_: GLenum,
+        indices: usize,
+    ) {
         unsafe {
             (self.draw_elements)(mode, count, type_, indices as *const GLvoid);
             #[cfg(debug_assertions)]
             self.check_error(stringify!(draw_elements));
+        }
+    }
+    #[inline]
+    pub unsafe fn tex_parameteri(&self, target: GLenum, pname: GLenum, param: GLint) {
+        unsafe {
+            (self.tex_parameteri)(target, pname, param);
+            #[cfg(debug_assertions)]
+            self.check_error(stringify!(tex_parameteri));
+        }
+    }
+    #[inline]
+    pub unsafe fn tex_image_2d(
+        &self,
+        target: GLenum,
+        level: GLint,
+        internal_format: GLint,
+        width: GLsizei,
+        height: GLsizei,
+        border: GLint,
+        format: GLenum,
+        type_: GLenum,
+        pixels: *const GLvoid,
+    ) {
+        unsafe {
+            (self.tex_image_2d)(
+                target,
+                level,
+                internal_format,
+                width,
+                height,
+                border,
+                format,
+                type_,
+                pixels,
+            );
+            #[cfg(debug_assertions)]
+            self.check_error(stringify!(tex_image_2d));
+        }
+    }
+    #[inline]
+    pub unsafe fn gen_textures(&self, textures: &mut [GLuint]) {
+        unsafe {
+            (self.gen_textures)(textures.len() as GLsizei, textures.as_mut_ptr());
+            #[cfg(debug_assertions)]
+            self.check_error(stringify!(gen_textures));
+        }
+    }
+    #[inline]
+    pub unsafe fn delete_textures(&self, textures: &[GLuint]) {
+        unsafe {
+            (self.delete_textures)(textures.len() as GLsizei, textures.as_ptr());
+            #[cfg(debug_assertions)]
+            self.check_error(stringify!(delete_textures));
+        }
+    }
+    #[inline]
+    pub unsafe fn bind_texture(&self, target: GLenum, texture: GLuint) {
+        unsafe {
+            (self.bind_texture)(target, texture);
+            #[cfg(debug_assertions)]
+            self.check_error(stringify!(bind_texture));
         }
     }
     #[inline]
@@ -812,7 +995,13 @@ impl Gl {
         }
     }
     #[inline]
-    pub unsafe fn buffer_data(&self, target: GLenum, size: GLsizeiptr, data: *const c_void, usage: GLenum) {
+    pub unsafe fn buffer_data(
+        &self,
+        target: GLenum,
+        size: GLsizeiptr,
+        data: *const c_void,
+        usage: GLenum,
+    ) {
         unsafe {
             (self.buffer_data)(target, size, data, usage);
             #[cfg(debug_assertions)]
@@ -820,7 +1009,13 @@ impl Gl {
         }
     }
     #[inline]
-    pub unsafe fn buffer_sub_data(&self, target: GLenum, offset: GLintptr, size: GLsizeiptr, data: *const c_void) {
+    pub unsafe fn buffer_sub_data(
+        &self,
+        target: GLenum,
+        offset: GLintptr,
+        size: GLsizeiptr,
+        data: *const c_void,
+    ) {
         unsafe {
             (self.buffer_sub_data)(target, offset, size, data);
             #[cfg(debug_assertions)]
@@ -839,7 +1034,8 @@ impl Gl {
     pub unsafe fn compile_shader(&self, shader: GLuint) {
         unsafe {
             (self.compile_shader)(shader);
-            #[cfg(debug_assertions)] {
+            #[cfg(debug_assertions)]
+            {
                 self.check_error(stringify!(compile_shader));
                 let mut compile_status = MaybeUninit::uninit();
                 self.get_shaderiv(shader, COMPILE_STATUS, compile_status.as_mut_ptr());
@@ -849,7 +1045,12 @@ impl Gl {
                     self.get_shaderiv(shader, INFO_LOG_LENGTH, info_log_length.as_mut_ptr());
                     let info_log_length = info_log_length.assume_init();
                     let mut info_log: Vec<u8> = Vec::with_capacity(info_log_length as usize);
-                    self.get_shader_info_log(shader, info_log_length, ptr::null_mut(), info_log.as_mut_ptr().cast());
+                    self.get_shader_info_log(
+                        shader,
+                        info_log_length,
+                        ptr::null_mut(),
+                        info_log.as_mut_ptr().cast(),
+                    );
                     info_log.set_len(info_log_length as usize - 1);
                     panic!("{}", str::from_utf8(&info_log).unwrap());
                 }
@@ -924,7 +1125,13 @@ impl Gl {
         }
     }
     #[inline]
-    pub unsafe fn get_program_info_log(&self, program: GLuint, buf_size: GLsizei, length: *mut GLsizei, info_log: *mut GLchar) {
+    pub unsafe fn get_program_info_log(
+        &self,
+        program: GLuint,
+        buf_size: GLsizei,
+        length: *mut GLsizei,
+        info_log: *mut GLchar,
+    ) {
         unsafe {
             (self.get_program_info_log)(program, buf_size, length, info_log);
             #[cfg(debug_assertions)]
@@ -940,7 +1147,13 @@ impl Gl {
         }
     }
     #[inline]
-    pub unsafe fn get_shader_info_log(&self, shader: GLuint, buf_size: GLsizei, length: *mut GLsizei, info_log: *mut GLchar) {
+    pub unsafe fn get_shader_info_log(
+        &self,
+        shader: GLuint,
+        buf_size: GLsizei,
+        length: *mut GLsizei,
+        info_log: *mut GLchar,
+    ) {
         unsafe {
             (self.get_shader_info_log)(shader, buf_size, length, info_log);
             #[cfg(debug_assertions)]
@@ -960,7 +1173,8 @@ impl Gl {
     pub unsafe fn link_program(&self, program: GLuint) {
         unsafe {
             (self.link_program)(program);
-            #[cfg(debug_assertions)] {
+            #[cfg(debug_assertions)]
+            {
                 self.check_error(stringify!(link_program));
                 let mut link_status = MaybeUninit::uninit();
                 self.get_programiv(program, LINK_STATUS, link_status.as_mut_ptr());
@@ -970,7 +1184,12 @@ impl Gl {
                     self.get_programiv(program, INFO_LOG_LENGTH, info_log_length.as_mut_ptr());
                     let info_log_length = info_log_length.assume_init();
                     let mut info_log: Vec<u8> = Vec::with_capacity(info_log_length as usize);
-                    self.get_program_info_log(program, info_log_length, ptr::null_mut(), info_log.as_mut_ptr().cast());
+                    self.get_program_info_log(
+                        program,
+                        info_log_length,
+                        ptr::null_mut(),
+                        info_log.as_mut_ptr().cast(),
+                    );
                     info_log.set_len(info_log_length as usize - 1);
                     panic!("{}", str::from_utf8(&info_log).unwrap());
                 }
@@ -994,7 +1213,13 @@ impl Gl {
         }
     }
     #[inline]
-    pub unsafe fn uniform_matrix4fv(&self, location: GLint, count: GLsizei, transpose: bool, value: *const GLfloat) {
+    pub unsafe fn uniform_matrix4fv(
+        &self,
+        location: GLint,
+        count: GLsizei,
+        transpose: bool,
+        value: *const GLfloat,
+    ) {
         unsafe {
             (self.uniform_matrix4fv)(location, count, transpose as GLboolean, value);
             #[cfg(debug_assertions)]
@@ -1002,9 +1227,24 @@ impl Gl {
         }
     }
     #[inline]
-    pub unsafe fn vertex_attrib_pointer(&self, index: GLuint, size: GLint, type_: GLenum, normalized: bool, stride: GLsizei, pointer: usize) {
+    pub unsafe fn vertex_attrib_pointer(
+        &self,
+        index: GLuint,
+        size: GLint,
+        type_: GLenum,
+        normalized: bool,
+        stride: GLsizei,
+        pointer: usize,
+    ) {
         unsafe {
-            (self.vertex_attrib_pointer)(index, size, type_, normalized as GLboolean, stride, pointer as *const c_void);
+            (self.vertex_attrib_pointer)(
+                index,
+                size,
+                type_,
+                normalized as GLboolean,
+                stride,
+                pointer as *const c_void,
+            );
             #[cfg(debug_assertions)]
             self.check_error(stringify!(vertex_attrib_pointer));
         }

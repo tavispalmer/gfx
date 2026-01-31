@@ -28,10 +28,7 @@ impl Shader {
             gl.delete_shader(fragment);
         }
 
-        Self {
-            gl,
-            program,
-        }
+        Self { gl, program }
     }
 
     pub fn id(&self) -> u32 {

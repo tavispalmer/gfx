@@ -95,7 +95,7 @@ void retro_reset(void) {
 void retro_run(void) {
     gfx_bind_framebuffer(gfx, hw_render.get_current_framebuffer());
     gfx_clear(gfx);
-    gfx_sprite(gfx, 0, 0, 16, 16);
+    gfx_sprite(gfx, 0, 0, 0);
     gfx_commit(gfx);
     video_cb(RETRO_HW_FRAME_BUFFER_VALID, 800, 600, 0);
 }

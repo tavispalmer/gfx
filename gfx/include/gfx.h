@@ -21,7 +21,7 @@ void gfx_view(gfx_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h);
 
 void gfx_clear(const gfx_t *gfx);
 
-void gfx_sprite(gfx_t *gfx, int32_t x, int32_t y, int32_t w, int32_t h);
+void gfx_sprite(gfx_t *gfx, uint32_t n, int32_t x, int32_t y);
 
 void gfx_commit(gfx_t *gfx);
 

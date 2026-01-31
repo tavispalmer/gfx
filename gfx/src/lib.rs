@@ -3,10 +3,15 @@ mod context;
 mod gl;
 mod shader;
 mod sprite_batch;
+mod tex;
 
-use std::{ffi::{c_char, c_void, CStr}, mem::MaybeUninit, ptr};
+use std::{
+    ffi::{CStr, c_char, c_void},
+    mem::MaybeUninit,
+    ptr,
+};
 
-use crate::context::Context;
+use crate::{context::Context, tex::Texture};
 
 pub struct Gfx {
     context: Context,
@@ -35,8 +40,12 @@ impl Gfx {
         self.context.clear()
     }
 
-    pub fn sprite(&mut self, x: i32, y: i32, w: i32, h: i32) {
-        self.context.sprite(x, y, w, h)
+    pub fn tex_new_1bpp(&mut self, buf: &[u8], w: usize, h: usize) -> u32 {
+        self.context.tex_new_1bpp(buf, w, h)
+    }
+
+    pub fn sprite(&mut self, n: u32, x: i32, y: i32) {
+        self.context.sprite(n, x, y)
     }
 
     pub fn commit(&mut self) {
@@ -46,19 +55,18 @@ impl Gfx {
 
 // c++ style init
 #[unsafe(no_mangle)]
-pub extern "C" fn gfx_init(gfx: &mut MaybeUninit<Gfx>, f: unsafe extern "C" fn(*const c_char) -> *const c_void) -> &mut Gfx {
+pub extern "C" fn gfx_init(
+    gfx: &mut MaybeUninit<Gfx>,
+    f: unsafe extern "C" fn(*const c_char) -> *const c_void,
+) -> &mut Gfx {
     gfx.write(Gfx::new(|s| unsafe { f(s.as_ptr()) }));
-    unsafe {
-        gfx.assume_init_mut()
-    }
+    unsafe { gfx.assume_init_mut() }
 }
 
 // c++ style deinit
 #[unsafe(no_mangle)]
 pub extern "C" fn gfx_deinit(gfx: &mut Gfx) {
-    unsafe {
-        ptr::drop_in_place(gfx)
-    }
+    unsafe { ptr::drop_in_place(gfx) }
 }
 
 #[unsafe(no_mangle)]
@@ -91,8 +99,8 @@ pub extern "C" fn gfx_clear(gfx: &Gfx) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn gfx_sprite(gfx: &mut Gfx, x: i32, y: i32, w: i32, h: i32) {
-    gfx.sprite(x, y, w, h)
+pub extern "C" fn gfx_sprite(gfx: &mut Gfx, n: u32, x: i32, y: i32) {
+    gfx.sprite(n, x, y)
 }
 
 #[unsafe(no_mangle)]

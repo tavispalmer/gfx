@@ -1,6 +1,15 @@
-use std::{ffi::CStr, mem::{self, MaybeUninit}, ptr, rc::Rc, slice};
+use std::{
+    ffi::CStr,
+    mem::{self, MaybeUninit},
+    ptr,
+    rc::Rc,
+    slice,
+};
 
-use crate::{gl::{self, Gl}, shader::Shader};
+use crate::{
+    gl::{self, Gl},
+    shader::Shader,
+};
 
 pub enum VertexElementFormat {
     Single,
@@ -43,7 +52,11 @@ pub struct VertexElement {
 }
 
 impl VertexElement {
-    pub const fn new(offset: usize, format: VertexElementFormat, usage: VertexElementUsage) -> Self {
+    pub const fn new(
+        offset: usize,
+        format: VertexElementFormat,
+        usage: VertexElementUsage,
+    ) -> Self {
         Self {
             offset,
             format,
@@ -64,15 +77,48 @@ pub struct VertexPosition {
 
 impl VertexPosition {
     pub const fn new(position: glm::vec2) -> Self {
-        Self {
-            position,
-        }
+        Self { position }
     }
 }
 
 impl Vertex for VertexPosition {
     fn elements() -> &'static [VertexElement] {
-        const ELEMENTS: [VertexElement; 1] = [VertexElement::new(mem::offset_of!(VertexPosition, position), VertexElementFormat::Vector2, VertexElementUsage::Position)];
+        const ELEMENTS: [VertexElement; 1] = [VertexElement::new(
+            mem::offset_of!(VertexPosition, position),
+            VertexElementFormat::Vector2,
+            VertexElementUsage::Position,
+        )];
+        &ELEMENTS
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VertexPositionTexture {
+    pub position: glm::vec2,
+    pub texture: glm::vec2,
+}
+
+impl VertexPositionTexture {
+    pub const fn new(position: glm::vec2, texture: glm::vec2) -> Self {
+        Self { position, texture }
+    }
+}
+
+impl Vertex for VertexPositionTexture {
+    fn elements() -> &'static [VertexElement] {
+        const ELEMENTS: [VertexElement; 2] = [
+            VertexElement::new(
+                mem::offset_of!(VertexPositionTexture, position),
+                VertexElementFormat::Vector2,
+                VertexElementUsage::Position,
+            ),
+            VertexElement::new(
+                mem::offset_of!(VertexPositionTexture, texture),
+                VertexElementFormat::Vector2,
+                VertexElementUsage::TextureCoordinate,
+            ),
+        ];
         &ELEMENTS
     }
 }
@@ -80,19 +126,22 @@ impl Vertex for VertexPosition {
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct Quad {
-    pub tl: VertexPosition,
-    pub tr: VertexPosition,
-    pub bl: VertexPosition,
-    pub br: VertexPosition,
+    pub tl: VertexPositionTexture,
+    pub tr: VertexPositionTexture,
+    pub bl: VertexPositionTexture,
+    pub br: VertexPositionTexture,
 }
 
 impl Quad {
-    pub const fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
+    pub const fn new(x: f32, y: f32, w: f32, h: f32, tx: f32, ty: f32, tw: f32, th: f32) -> Self {
         Self {
-            tl: VertexPosition::new(glm::vec2::new(x, y)),
-            tr: VertexPosition::new(glm::vec2::new(x + w, y)),
-            bl: VertexPosition::new(glm::vec2::new(x, y + h)),
-            br: VertexPosition::new(glm::vec2::new(x + w, y + h)),
+            tl: VertexPositionTexture::new(glm::vec2::new(x, y), glm::vec2::new(tx, ty)),
+            tr: VertexPositionTexture::new(glm::vec2::new(x + w, y), glm::vec2::new(tx + tw, ty)),
+            bl: VertexPositionTexture::new(glm::vec2::new(x, y + h), glm::vec2::new(tx, ty + th)),
+            br: VertexPositionTexture::new(
+                glm::vec2::new(x + w, y + h),
+                glm::vec2::new(tx + tw, ty + th),
+            ),
         }
     }
 }
@@ -107,7 +156,7 @@ pub struct QuadStream {
     vertex_array: u32,
     quad_buf: u32,
     index_buf: u32,
-    
+
     ortho: u32,
 }
 
@@ -116,23 +165,29 @@ impl QuadStream {
         let quad_vec = Vec::with_capacity(256);
         let mut index = Box::new_uninit_slice(6 * quad_vec.capacity());
         for i in 0..quad_vec.capacity() {
-            index[i*6+0] = MaybeUninit::new((i*4+0) as u16);
-            index[i*6+1] = MaybeUninit::new((i*4+1) as u16);
-            index[i*6+2] = MaybeUninit::new((i*4+2) as u16);
-            index[i*6+3] = MaybeUninit::new((i*4+1) as u16);
-            index[i*6+4] = MaybeUninit::new((i*4+3) as u16);
-            index[i*6+5] = MaybeUninit::new((i*4+2) as u16);
+            index[i * 6 + 0] = MaybeUninit::new((i * 4 + 0) as u16);
+            index[i * 6 + 1] = MaybeUninit::new((i * 4 + 1) as u16);
+            index[i * 6 + 2] = MaybeUninit::new((i * 4 + 2) as u16);
+            index[i * 6 + 3] = MaybeUninit::new((i * 4 + 1) as u16);
+            index[i * 6 + 4] = MaybeUninit::new((i * 4 + 3) as u16);
+            index[i * 6 + 5] = MaybeUninit::new((i * 4 + 2) as u16);
         }
         let index = unsafe { index.assume_init() };
 
         let (vertex_array, quad_buf, index_buf, ortho);
         unsafe {
             let mut vertex_arrays = [MaybeUninit::uninit(); 1];
-            gl.gen_vertex_arrays(slice::from_raw_parts_mut(vertex_arrays.as_mut_ptr().cast(), vertex_arrays.len()));
+            gl.gen_vertex_arrays(slice::from_raw_parts_mut(
+                vertex_arrays.as_mut_ptr().cast(),
+                vertex_arrays.len(),
+            ));
             vertex_array = vertex_arrays[0].assume_init();
 
             let mut buffers = [MaybeUninit::uninit(); 2];
-            gl.gen_buffers(slice::from_raw_parts_mut(buffers.as_mut_ptr().cast(), buffers.len()));
+            gl.gen_buffers(slice::from_raw_parts_mut(
+                buffers.as_mut_ptr().cast(),
+                buffers.len(),
+            ));
             quad_buf = buffers[0].assume_init();
             index_buf = buffers[1].assume_init();
 
@@ -154,14 +209,16 @@ impl QuadStream {
                 gl::STATIC_DRAW,
             );
 
-            for attrib in VertexPosition::elements() {
-                let index = gl.get_attrib_location(shader.id(), attrib.usage.name()).cast_unsigned();
+            for attrib in VertexPositionTexture::elements() {
+                let index = gl
+                    .get_attrib_location(shader.id(), attrib.usage.name())
+                    .cast_unsigned();
                 gl.vertex_attrib_pointer(
                     index,
                     attrib.format.size() as i32,
                     gl::FLOAT,
                     false,
-                    size_of::<VertexPosition>() as i32,
+                    size_of::<VertexPositionTexture>() as i32,
                     attrib.offset,
                 );
                 gl.enable_vertex_attrib_array(index);
@@ -169,7 +226,9 @@ impl QuadStream {
 
             gl.bind_vertex_array(0);
 
-            ortho = gl.get_uniform_location(shader.id(), c"ortho").cast_unsigned();
+            ortho = gl
+                .get_uniform_location(shader.id(), c"ortho")
+                .cast_unsigned();
         }
 
         Self {
@@ -188,7 +247,8 @@ impl QuadStream {
         let ortho = glm::mat4::<f32>::ortho(x, x + w, y + h, y);
         unsafe {
             self.gl.use_program(self.shader.id());
-            self.gl.uniform_matrix4fv(self.ortho.cast_signed(), 1, false, ortho.as_ptr().cast());
+            self.gl
+                .uniform_matrix4fv(self.ortho.cast_signed(), 1, false, ortho.as_ptr().cast());
         }
     }
 
@@ -207,7 +267,12 @@ impl QuadStream {
             );
             self.gl.bind_vertex_array(self.vertex_array);
             self.gl.use_program(self.shader.id());
-            self.gl.draw_elements(gl::TRIANGLES, (self.quad_vec.len() * 6) as i32, gl::UNSIGNED_SHORT, 0);
+            self.gl.draw_elements(
+                gl::TRIANGLES,
+                (self.quad_vec.len() * 6) as i32,
+                gl::UNSIGNED_SHORT,
+                0,
+            );
             self.gl.bind_vertex_array(0);
         }
 
